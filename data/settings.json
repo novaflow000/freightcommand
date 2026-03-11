@@ -1,0 +1,64 @@
+{
+  "apiKeys": {
+    "hapagLloyd": {
+      "clientId": "",
+      "clientSecret": ""
+    },
+    "maersk": {
+      "apiKey": "ksdfwknfdwpdkwdknwkdwkwkkndkwndw"
+    },
+    "cmaCgm": {
+      "apiKey": ""
+    },
+    "shipsGo": {
+      "apiKey": "USE_ENV_OR_INSERT_TOKEN"
+    },
+    "vizion": {
+      "apiKey": ""
+    },
+    "seaRates": {
+      "apiKey": ""
+    },
+    "terminal49": {
+      "apiKey": ""
+    }
+  },
+  "alerts": {
+    "delayThresholdDays": 2,
+    "notifyOnArrival": true,
+    "notifyOnDelay": true,
+    "emailRecipients": [
+      "lemouakni2@gmail.com"
+    ],
+    "escalation": "3"
+  },
+  "status": {
+    "hapagLloyd": {
+      "status": "missing",
+      "lastValidated": "2026-03-09T15:51:35.894Z",
+      "message": "API key/secret missing"
+    },
+    "maersk": {
+      "status": "simulated",
+      "lastValidated": "2026-03-09T15:51:35.894Z",
+      "message": "Using simulated data (API not reachable)"
+    },
+    "cmaCgm": {
+      "status": "missing",
+      "lastValidated": "2026-03-09T15:51:35.894Z",
+      "message": "API key/secret missing"
+    },
+    "shipsGo": {
+      "status": "missing"
+    },
+    "vizion": {
+      "status": "missing"
+    },
+    "seaRates": {
+      "status": "missing"
+    },
+    "terminal49": {
+      "status": "missing"
+    }
+  }
+}

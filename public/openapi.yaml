@@ -1,0 +1,438 @@
+openapi: 3.0.0
+info:
+  title: Freight Command Center API
+  version: 2.0
+  description: API de tracking maritime pour la gestion et le suivi des expéditions.
+servers:
+  - url: /
+    description: Serveur principal
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ShipmentInjected:
+      type: object
+      required:
+        - bl_number
+        - client
+        - container_number
+        - carrier
+        - origin
+        - destination
+        - cargo_type
+        - cargo_weight
+        - cargo_value
+        - customer_ref
+        - incoterm
+      properties:
+        bl_number:
+          type: string
+          example: "HLCU123456789"
+        client:
+          type: string
+          example: "TotalEnergies"
+        container_number:
+          type: string
+          example: "TGHU1234567"
+        carrier:
+          type: string
+          example: "Hapag-Lloyd"
+        origin:
+          type: string
+          example: "Casablanca"
+        destination:
+          type: string
+          example: "Rotterdam"
+        cargo_type:
+          type: string
+          example: "Chemicals"
+        cargo_weight:
+          type: string
+          example: "24000 kg"
+        cargo_value:
+          type: string
+          example: "150000 EUR"
+        customer_ref:
+          type: string
+          example: "PO-2023-001"
+        incoterm:
+          type: string
+          example: "CIF"
+        status:
+          type: string
+          example: "In Transit"
+        eta:
+          type: string
+          format: date
+          example: "2023-12-25"
+        special_instructions:
+          type: string
+          example: "Handle with care"
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-11-01T10:00:00Z"
+
+    ShipmentTracked:
+      type: object
+      properties:
+        bl_number:
+          type: string
+          example: "HLCU123456789"
+        client:
+          type: string
+          example: "TotalEnergies"
+        cargo:
+          type: object
+          properties:
+            type:
+              type: string
+            weight:
+              type: string
+            value:
+              type: string
+            ref:
+              type: string
+        route:
+          type: object
+          properties:
+            origin:
+              type: string
+            destination:
+              type: string
+            incoterm:
+              type: string
+        tracking:
+          type: object
+          properties:
+            container_number:
+              type: string
+            carrier:
+              type: string
+            status:
+              type: string
+            location:
+              $ref: '#/components/schemas/Position'
+            eta:
+              type: string
+            events:
+              type: array
+              items:
+                $ref: '#/components/schemas/Event'
+        sources:
+          type: object
+          properties:
+            injected_at:
+              type: string
+            api_source:
+              type: string
+            api_status:
+              type: string
+            fusion_id:
+              type: string
+            timestamp:
+              type: string
+
+    Position:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+          example: 34.0522
+        lng:
+          type: number
+          format: double
+          example: -118.2437
+        name:
+          type: string
+          example: "Port of Los Angeles"
+
+    Event:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        description:
+          type: string
+        location:
+          type: string
+        status:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Resource not found"
+        details:
+          type: string
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/v1/shipments/injected:
+    get:
+      summary: Liste toutes les expéditions injectées
+      tags:
+        - Injected Data
+      responses:
+        '200':
+          description: Liste des expéditions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShipmentInjected'
+    post:
+      summary: Ajouter une expédition manuellement
+      tags:
+        - Injected Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipmentInjected'
+      responses:
+        '201':
+          description: Expédition créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentInjected'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/shipments/injected/{bl}:
+    put:
+      summary: Modifier une expédition existante
+      tags:
+        - Injected Data
+      parameters:
+        - in: path
+          name: bl
+          schema:
+            type: string
+          required: true
+          description: Numéro de BL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipmentInjected'
+      responses:
+        '200':
+          description: Expédition mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentInjected'
+        '404':
+          description: Expédition non trouvée
+
+  /api/v1/shipments/injected/template:
+    get:
+      summary: Télécharger le template CSV
+      tags:
+        - Injected Data
+      responses:
+        '200':
+          description: Fichier CSV template
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /api/v1/shipments/injected/upload:
+    post:
+      summary: Upload d'un fichier CSV d'expéditions
+      tags:
+        - Injected Data
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Importation réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  count:
+                    type: integer
+
+  /api/v1/shipments/tracking/{bl}:
+    get:
+      summary: Obtenir le tracking fusionné d'un BL spécifique
+      tags:
+        - Tracking
+      parameters:
+        - in: path
+          name: bl
+          schema:
+            type: string
+          required: true
+          description: Numéro de BL
+      responses:
+        '200':
+          description: Données de tracking fusionnées
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentTracked'
+        '404':
+          description: BL non trouvé
+
+  /api/v1/shipments/tracking:
+    get:
+      summary: Obtenir le tracking de toutes les expéditions
+      tags:
+        - Tracking
+      responses:
+        '200':
+          description: Liste des trackings fusionnés
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShipmentTracked'
+
+  /api/v1/shipments/tracking/batch:
+    post:
+      summary: Obtenir le tracking pour une liste de BLs
+      tags:
+        - Tracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bl_numbers:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Liste des trackings demandés
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShipmentTracked'
+
+  /api/v1/analytics/dashboard:
+    get:
+      summary: Obtenir les données agrégées pour le dashboard
+      tags:
+        - Analytics
+      responses:
+        '200':
+          description: Données du dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  in_transit:
+                    type: integer
+                  delivered:
+                    type: integer
+                  delayed:
+                    type: integer
+                  total_value:
+                    type: number
+                  performance:
+                    type: number
+                  by_carrier:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        value:
+                          type: integer
+
+  /api/v1/analytics/performance:
+    get:
+      summary: Obtenir les KPIs de performance détaillés
+      tags:
+        - Analytics
+      responses:
+        '200':
+          description: KPIs de performance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  average_transit_time:
+                    type: number
+                  on_time_delivery_rate:
+                    type: number
+                  delay_reasons:
+                    type: object
+
+  /api/v1/export/csv:
+    get:
+      summary: Exporter toutes les données fusionnées en CSV
+      tags:
+        - Export
+      responses:
+        '200':
+          description: Fichier CSV exporté
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /api/v1/config/carriers:
+    get:
+      summary: Vérifier le statut des connecteurs API
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: Statut des connecteurs
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum: [active, inactive, error]
+                    latency:
+                      type: integer

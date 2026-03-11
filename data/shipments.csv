@@ -1,0 +1,2 @@
+bl_number,client,container_number,carrier,carrier_code,carrier_name,origin,destination,origin_port,destination_port,cargo_type,cargo_weight,weight,cargo_value,customer_ref,incoterm,special_instructions,created_at,updated_at,status,eta,tracking_provider,external_tracking_id,last_tracking_update
+CSA0418719,,,CMA CGM,CMDU,CMA CGM,,,,,,,,,,,,2026-03-06T13:46:34.557Z,2026-03-09T17:50:58.635Z,In Transit,2026-03-21T17:50:58.632Z,ShipsGo,sim-,2026-03-09T17:50:58.634Z

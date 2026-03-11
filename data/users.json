@@ -1,0 +1,17 @@
+[
+  {
+    "id": "1",
+    "name": "Admin User",
+    "email": "admin@example.com",
+    "role": "admin",
+    "status": "active",
+    "lastLogin": "2026-03-05T02:39:44.236Z"
+  },
+  {
+    "id": "2",
+    "name": "Operator",
+    "email": "ops@example.com",
+    "role": "user",
+    "status": "active"
+  }
+]

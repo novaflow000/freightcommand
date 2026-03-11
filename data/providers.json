@@ -1,0 +1,1663 @@
+{
+  "providers": [
+    {
+      "id": "prov_1772720875164",
+      "name": "ShipsGo",
+      "base_url": "https://api.shipsgo.com",
+      "auth_type": "CUSTOM_HEADER",
+      "api_key": "UERXekmrVu7ZZbbr1AeH1qXp9xcQ/6FeTzJ0gDA9nHDkw7/YlfCElc0XKdLB98R1JBbBPG5Bfwq2uxsrc8uEvQ==",
+      "headers": {
+        "X-Shipsgo-User-Token": "{{API_KEY}}",
+        "Content-Type": "application/json"
+      },
+      "is_active": true,
+      "priority": 1,
+      "multi_carrier": true,
+      "supports_container_tracking": true,
+      "supports_bl_tracking": true,
+      "created_at": "2026-03-05T14:27:55.164Z",
+      "updated_at": "2026-03-05T14:27:55.164Z"
+    }
+  ],
+  "endpoints": [
+    {
+      "id": "ep_1772723206725",
+      "provider_id": "prov_1772720875164",
+      "endpoint_name": "create_tracking",
+      "method": "POST",
+      "path": "/v2/ocean/shipments",
+      "body_template": {
+        "reference": "{{reference}}",
+        "container_number": "{{container_number}}",
+        "booking_number": "{{booking_number}}",
+        "carrier": "{{carrier}}",
+        "tags": [
+          "platform"
+        ]
+      },
+      "response_root": "",
+      "created_at": "2026-03-05T15:06:46.725Z"
+    },
+    {
+      "id": "ep_1772725385157",
+      "provider_id": "prov_1772720875164",
+      "endpoint_name": "get_shipment",
+      "method": "GET",
+      "path": "/v2/ocean/shipments/{{shipment_id}}",
+      "body_template": {},
+      "path_params": [],
+      "response_root": "shipment",
+      "created_at": "2026-03-05T15:43:05.157Z"
+    },
+    {
+      "id": "ep_1772725547050",
+      "provider_id": "prov_1772720875164",
+      "endpoint_name": "get_route",
+      "method": "GET",
+      "path": "/v2/ocean/shipments/{{shipment_id}}/geojson",
+      "body_template": {},
+      "path_params": [],
+      "response_root": "features",
+      "created_at": "2026-03-05T15:45:47.050Z"
+    }
+  ],
+  "mappings": [
+    {
+      "id": "map_1772756025078",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "message",
+      "internal_field": "message",
+      "domain_entity": "Shipment",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.078Z"
+    },
+    {
+      "id": "map_1772756025079",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.id",
+      "internal_field": "shipment_id",
+      "domain_entity": "Shipment",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.079Z"
+    },
+    {
+      "id": "map_1772756025079",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.booking_number",
+      "internal_field": "booking_number",
+      "domain_entity": "Shipment",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.079Z"
+    },
+    {
+      "id": "map_1772756025080",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.container_number",
+      "internal_field": "shipment_container_number",
+      "domain_entity": "Shipment",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.080Z"
+    },
+    {
+      "id": "map_1772756025080",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.container_count",
+      "internal_field": "container_count",
+      "domain_entity": "Shipment",
+      "transformation": "number",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.080Z"
+    },
+    {
+      "id": "map_1772756025081",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.carrier.scac",
+      "internal_field": "carrier_code",
+      "domain_entity": "Carrier",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.081Z"
+    },
+    {
+      "id": "map_1772756025081",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.carrier.name",
+      "internal_field": "carrier_name",
+      "domain_entity": "Carrier",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.081Z"
+    },
+    {
+      "id": "map_1772756025082",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.status",
+      "internal_field": "shipment_status",
+      "domain_entity": "Shipment",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.081Z"
+    },
+    {
+      "id": "map_1772756025082",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_loading.location.code",
+      "internal_field": "origin_port_code",
+      "domain_entity": "Route",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.082Z"
+    },
+    {
+      "id": "map_1772756025082",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_loading.location.name",
+      "internal_field": "origin_port_name",
+      "domain_entity": "Route",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.082Z"
+    },
+    {
+      "id": "map_1772756025083",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_loading.location.timezone",
+      "internal_field": "origin_timezone",
+      "domain_entity": "Route",
+      "transformation": "date",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.083Z"
+    },
+    {
+      "id": "map_1772756025083",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_loading.location.country.code",
+      "internal_field": "origin_country_code",
+      "domain_entity": "Route",
+      "transformation": "number",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.083Z"
+    },
+    {
+      "id": "map_1772756025084",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_loading.location.country.name",
+      "internal_field": "origin_country_name",
+      "domain_entity": "Route",
+      "transformation": "number",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.084Z"
+    },
+    {
+      "id": "map_1772756025084",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_loading.date_of_loading",
+      "internal_field": "departure_time",
+      "domain_entity": "Route",
+      "transformation": "date",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.084Z"
+    },
+    {
+      "id": "map_1772756025084",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_loading.date_of_loading_initial",
+      "internal_field": "departure_time_initial",
+      "domain_entity": "Route",
+      "transformation": "date",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.084Z"
+    },
+    {
+      "id": "map_1772756025085",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.ts_count",
+      "internal_field": "transshipment_count",
+      "domain_entity": "Route",
+      "transformation": "number",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.085Z"
+    },
+    {
+      "id": "map_1772756025085",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_discharge.location.code",
+      "internal_field": "destination_port_code",
+      "domain_entity": "Route",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.085Z"
+    },
+    {
+      "id": "map_1772756025085",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_discharge.location.name",
+      "internal_field": "destination_port_name",
+      "domain_entity": "Route",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.085Z"
+    },
+    {
+      "id": "map_1772756025086",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_discharge.location.timezone",
+      "internal_field": "destination_timezone",
+      "domain_entity": "Route",
+      "transformation": "date",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.086Z"
+    },
+    {
+      "id": "map_1772756025086",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_discharge.location.country.code",
+      "internal_field": "destination_country_code",
+      "domain_entity": "Route",
+      "transformation": "number",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.086Z"
+    },
+    {
+      "id": "map_1772756025087",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_discharge.location.country.name",
+      "internal_field": "destination_country_name",
+      "domain_entity": "Route",
+      "transformation": "number",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.087Z"
+    },
+    {
+      "id": "map_1772756025087",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_discharge.date_of_discharge",
+      "internal_field": "eta",
+      "domain_entity": "Route",
+      "transformation": "date",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.087Z"
+    },
+    {
+      "id": "map_1772756025088",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.port_of_discharge.date_of_discharge_initial",
+      "internal_field": "eta_initial",
+      "domain_entity": "Route",
+      "transformation": "date",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.087Z"
+    },
+    {
+      "id": "map_1772756025088",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.transit_time",
+      "internal_field": "transit_time_days",
+      "domain_entity": "Route",
+      "transformation": "number",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.088Z"
+    },
+    {
+      "id": "map_1772756025088",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.transit_percentage",
+      "internal_field": "transit_progress_percent",
+      "domain_entity": "Route",
+      "transformation": "number",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.088Z"
+    },
+    {
+      "id": "map_1772756025089",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.route.co2_emission",
+      "internal_field": "co2_emission",
+      "domain_entity": "Route",
+      "transformation": "number",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.089Z"
+    },
+    {
+      "id": "map_1772756025089",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].number",
+      "internal_field": "container_number",
+      "domain_entity": "Container",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.089Z"
+    },
+    {
+      "id": "map_1772756025089",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].status",
+      "internal_field": "container_status",
+      "domain_entity": "Container",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.089Z"
+    },
+    {
+      "id": "map_1772756025090",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].size",
+      "internal_field": "container_size",
+      "domain_entity": "Container",
+      "transformation": "number",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.090Z"
+    },
+    {
+      "id": "map_1772756025090",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].type",
+      "internal_field": "container_type",
+      "domain_entity": "Container",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.090Z"
+    },
+    {
+      "id": "map_1772756025090",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].event",
+      "internal_field": "event_type",
+      "domain_entity": "Event",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.090Z"
+    },
+    {
+      "id": "map_1772756025090",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].status",
+      "internal_field": "event_status",
+      "domain_entity": "Event",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.090Z"
+    },
+    {
+      "id": "map_1772756025090",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].location.code",
+      "internal_field": "event_location_code",
+      "domain_entity": "Event",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.090Z"
+    },
+    {
+      "id": "map_1772756025091",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].location.name",
+      "internal_field": "event_location_name",
+      "domain_entity": "Event",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.091Z"
+    },
+    {
+      "id": "map_1772756025091",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].location.timezone",
+      "internal_field": "event_timestamp",
+      "domain_entity": "Event",
+      "transformation": "date",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.091Z"
+    },
+    {
+      "id": "map_1772756025091",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].location.country.code",
+      "internal_field": "event_country_code",
+      "domain_entity": "Event",
+      "transformation": "number",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.091Z"
+    },
+    {
+      "id": "map_1772756025091",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].location.country.name",
+      "internal_field": "event_country_name",
+      "domain_entity": "Event",
+      "transformation": "number",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.091Z"
+    },
+    {
+      "id": "map_1772756025091",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].timestamp",
+      "internal_field": "event_timestamp",
+      "domain_entity": "Event",
+      "transformation": "date",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.091Z"
+    },
+    {
+      "id": "map_1772756025091",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].vessel.name",
+      "internal_field": "vessel_name",
+      "domain_entity": "Vessel",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.091Z"
+    },
+    {
+      "id": "map_1772756025091",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].vessel.imo",
+      "internal_field": "vessel_imo",
+      "domain_entity": "Vessel",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.091Z"
+    },
+    {
+      "id": "map_1772756025092",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.containers[].movements[].voyage",
+      "internal_field": "voyage_number",
+      "domain_entity": "Vessel",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.092Z"
+    },
+    {
+      "id": "map_1772756025092",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.tokens.map",
+      "internal_field": "map_token",
+      "domain_entity": "Metadata",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.092Z"
+    },
+    {
+      "id": "map_1772756025092",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.followers[]",
+      "internal_field": "shipment_followers",
+      "domain_entity": "Metadata",
+      "transformation": "array",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.092Z"
+    },
+    {
+      "id": "map_1772756025092",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.tags[]",
+      "internal_field": "shipment_tags",
+      "domain_entity": "Metadata",
+      "transformation": "array",
+      "is_array": true,
+      "created_at": "2026-03-06T00:13:45.092Z"
+    },
+    {
+      "id": "map_1772756025092",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.creator.name",
+      "internal_field": "created_by_name",
+      "domain_entity": "Metadata",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.092Z"
+    },
+    {
+      "id": "map_1772756025093",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.creator.email",
+      "internal_field": "created_by_email",
+      "domain_entity": "Metadata",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.093Z"
+    },
+    {
+      "id": "map_1772756025093",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.created_at",
+      "internal_field": "created_at",
+      "domain_entity": "Shipment",
+      "transformation": "date",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.093Z"
+    },
+    {
+      "id": "map_1772756025093",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.updated_at",
+      "internal_field": "updated_at",
+      "domain_entity": "Shipment",
+      "transformation": "date",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.093Z"
+    },
+    {
+      "id": "map_1772756025093",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.checked_at",
+      "internal_field": "checked_at",
+      "domain_entity": "Shipment",
+      "transformation": "date",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.093Z"
+    }
+  ],
+  "internal_fields": [
+    {
+      "id": "container_number",
+      "name": "container_number",
+      "domain": "Container",
+      "data_type": "string"
+    },
+    {
+      "id": "if_1",
+      "name": "bl_number",
+      "domain": "Shipment",
+      "data_type": "number"
+    },
+    {
+      "id": "if_2",
+      "name": "carrier",
+      "domain": "Carrier",
+      "data_type": "string"
+    },
+    {
+      "id": "if_3",
+      "name": "origin_port",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "if_4",
+      "name": "destination_port",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "eta",
+      "name": "eta",
+      "domain": "Route",
+      "data_type": "date"
+    },
+    {
+      "id": "if_6",
+      "name": "status",
+      "domain": "Shipment",
+      "data_type": "string"
+    },
+    {
+      "id": "vessel_name",
+      "name": "vessel_name",
+      "domain": "Vessel",
+      "data_type": "string"
+    },
+    {
+      "id": "if_8",
+      "name": "client",
+      "domain": "Shipment",
+      "data_type": "string"
+    },
+    {
+      "id": "if_9",
+      "name": "weight",
+      "domain": "Shipment",
+      "data_type": "string"
+    },
+    {
+      "id": "shipment_id",
+      "name": "shipment_id",
+      "domain": "Shipment",
+      "data_type": "string",
+      "description": "Provider shipment identifier"
+    },
+    {
+      "id": "booking_number",
+      "name": "booking_number",
+      "domain": "Shipment",
+      "data_type": "string"
+    },
+    {
+      "id": "container_count",
+      "name": "container_count",
+      "domain": "Shipment",
+      "data_type": "number"
+    },
+    {
+      "id": "shipment_status",
+      "name": "shipment_status",
+      "domain": "Shipment",
+      "data_type": "string"
+    },
+    {
+      "id": "shipment_message",
+      "name": "shipment_message",
+      "domain": "Shipment",
+      "data_type": "string"
+    },
+    {
+      "id": "created_at",
+      "name": "created_at",
+      "domain": "Shipment",
+      "data_type": "date"
+    },
+    {
+      "id": "updated_at",
+      "name": "updated_at",
+      "domain": "Shipment",
+      "data_type": "date"
+    },
+    {
+      "id": "checked_at",
+      "name": "checked_at",
+      "domain": "Shipment",
+      "data_type": "date"
+    },
+    {
+      "id": "provider",
+      "name": "provider",
+      "domain": "Shipment",
+      "data_type": "string"
+    },
+    {
+      "id": "endpoint",
+      "name": "endpoint",
+      "domain": "Shipment",
+      "data_type": "string"
+    },
+    {
+      "id": "carrier_code",
+      "name": "carrier_code",
+      "domain": "Carrier",
+      "data_type": "string"
+    },
+    {
+      "id": "carrier_name",
+      "name": "carrier_name",
+      "domain": "Carrier",
+      "data_type": "string"
+    },
+    {
+      "id": "origin_port_name",
+      "name": "origin_port_name",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "origin_port_code",
+      "name": "origin_port_code",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "origin_country_code",
+      "name": "origin_country_code",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "origin_country_name",
+      "name": "origin_country_name",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "origin_timezone",
+      "name": "origin_timezone",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "departure_time",
+      "name": "departure_time",
+      "domain": "Route",
+      "data_type": "date"
+    },
+    {
+      "id": "departure_time_initial",
+      "name": "departure_time_initial",
+      "domain": "Route",
+      "data_type": "date"
+    },
+    {
+      "id": "destination_port_name",
+      "name": "destination_port_name",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "destination_port_code",
+      "name": "destination_port_code",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "destination_country_code",
+      "name": "destination_country_code",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "destination_country_name",
+      "name": "destination_country_name",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "destination_timezone",
+      "name": "destination_timezone",
+      "domain": "Route",
+      "data_type": "string"
+    },
+    {
+      "id": "eta_initial",
+      "name": "eta_initial",
+      "domain": "Route",
+      "data_type": "date"
+    },
+    {
+      "id": "transshipment_count",
+      "name": "transshipment_count",
+      "domain": "Route",
+      "data_type": "number"
+    },
+    {
+      "id": "transit_time_days",
+      "name": "transit_time_days",
+      "domain": "Route",
+      "data_type": "number"
+    },
+    {
+      "id": "transit_progress_percent",
+      "name": "transit_progress_percent",
+      "domain": "Route",
+      "data_type": "number"
+    },
+    {
+      "id": "co2_emission",
+      "name": "co2_emission",
+      "domain": "Route",
+      "data_type": "number"
+    },
+    {
+      "id": "container_status",
+      "name": "container_status",
+      "domain": "Container",
+      "data_type": "string"
+    },
+    {
+      "id": "container_size",
+      "name": "container_size",
+      "domain": "Container",
+      "data_type": "string"
+    },
+    {
+      "id": "container_type",
+      "name": "container_type",
+      "domain": "Container",
+      "data_type": "string"
+    },
+    {
+      "id": "event_type",
+      "name": "event_type",
+      "domain": "Event",
+      "data_type": "string"
+    },
+    {
+      "id": "event_status",
+      "name": "event_status",
+      "domain": "Event",
+      "data_type": "string"
+    },
+    {
+      "id": "event_timestamp",
+      "name": "event_timestamp",
+      "domain": "Event",
+      "data_type": "date"
+    },
+    {
+      "id": "event_location_name",
+      "name": "event_location_name",
+      "domain": "Event",
+      "data_type": "string"
+    },
+    {
+      "id": "event_location_code",
+      "name": "event_location_code",
+      "domain": "Event",
+      "data_type": "string"
+    },
+    {
+      "id": "event_country_code",
+      "name": "event_country_code",
+      "domain": "Event",
+      "data_type": "string"
+    },
+    {
+      "id": "event_country_name",
+      "name": "event_country_name",
+      "domain": "Event",
+      "data_type": "string"
+    },
+    {
+      "id": "event_timezone",
+      "name": "event_timezone",
+      "domain": "Event",
+      "data_type": "string"
+    },
+    {
+      "id": "vessel_imo",
+      "name": "vessel_imo",
+      "domain": "Vessel",
+      "data_type": "string"
+    },
+    {
+      "id": "voyage_number",
+      "name": "voyage_number",
+      "domain": "Vessel",
+      "data_type": "string"
+    },
+    {
+      "id": "route_geometry_type",
+      "name": "route_geometry_type",
+      "domain": "RouteGeometry",
+      "data_type": "string"
+    },
+    {
+      "id": "route_coordinates",
+      "name": "route_coordinates",
+      "domain": "RouteGeometry",
+      "data_type": "geojson",
+      "is_array": true
+    },
+    {
+      "id": "current_position_index",
+      "name": "current_position_index",
+      "domain": "RouteGeometry",
+      "data_type": "number"
+    },
+    {
+      "id": "current_coordinates",
+      "name": "current_coordinates",
+      "domain": "RouteGeometry",
+      "data_type": "geojson"
+    },
+    {
+      "id": "map_token",
+      "name": "map_token",
+      "domain": "Metadata",
+      "data_type": "string"
+    },
+    {
+      "id": "shipment_followers",
+      "name": "shipment_followers",
+      "domain": "Metadata",
+      "data_type": "array",
+      "is_array": true
+    },
+    {
+      "id": "shipment_tags",
+      "name": "shipment_tags",
+      "domain": "Metadata",
+      "data_type": "array",
+      "is_array": true
+    },
+    {
+      "id": "created_by_name",
+      "name": "created_by_name",
+      "domain": "Metadata",
+      "data_type": "string"
+    },
+    {
+      "id": "created_by_email",
+      "name": "created_by_email",
+      "domain": "Metadata",
+      "data_type": "string"
+    },
+    {
+      "id": "message",
+      "name": "message",
+      "domain": "Shipment",
+      "data_type": "string"
+    },
+    {
+      "id": "shipment_container_number",
+      "name": "shipment_container_number",
+      "domain": "Shipment",
+      "data_type": "string"
+    }
+  ],
+  "capabilities": [],
+  "coverage": [
+    {
+      "id": "cov_shipsgo_cma",
+      "provider_id": "prov_1772720875164",
+      "carrier_code": "CMA"
+    },
+    {
+      "id": "cov_shipsgo_msc",
+      "provider_id": "prov_1772720875164",
+      "carrier_code": "MSC"
+    },
+    {
+      "id": "cov_shipsgo_cos",
+      "provider_id": "prov_1772720875164",
+      "carrier_code": "COS"
+    },
+    {
+      "id": "cov_shipsgo_hlc",
+      "provider_id": "prov_1772720875164",
+      "carrier_code": "HLC"
+    }
+  ],
+  "health": [],
+  "api_logs": [
+    {
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772720945862",
+      "request_url": "https://api.shipsgo.com/v2/shipments",
+      "request_headers": {
+        "X-Shipsgo-User-Token": "",
+        "Content-Type": "application/json",
+        "Authorization": "***"
+      },
+      "request_body": {
+        "containerNumber": "",
+        "blNumber": "",
+        "bookingNumber": "CSA0418719"
+      },
+      "created_at": "2026-03-05T14:46:22.100Z",
+      "response_status": 404,
+      "response_body": {
+        "message": "The route v2/shipments could not be found."
+      },
+      "latency": 204
+    },
+    {
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772720945862",
+      "request_url": "https://api.shipsgo.com/v2/shipments",
+      "request_headers": {
+        "X-Shipsgo-User-Token": "***",
+        "Content-Type": "application/json"
+      },
+      "request_body": {
+        "containerNumber": "",
+        "blNumber": "",
+        "bookingNumber": "CSA0418719"
+      },
+      "created_at": "2026-03-05T14:53:58.585Z",
+      "response_status": 404,
+      "response_body": {
+        "message": "The route v2/shipments could not be found."
+      },
+      "latency": 266
+    },
+    {
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772723206725",
+      "request_url": "https://api.shipsgo.com/v2/ocean/shipments",
+      "request_headers": {
+        "X-Shipsgo-User-Token": "***",
+        "Content-Type": "application/json"
+      },
+      "request_body": {
+        "reference": "",
+        "container_number": "",
+        "booking_number": "CSA0418719",
+        "carrier": "",
+        "tags": [
+          ""
+        ]
+      },
+      "created_at": "2026-03-05T15:07:02.273Z",
+      "response_status": 422,
+      "response_body": {
+        "message": "The tags.0 field must be a string.",
+        "errors": {
+          "tags.0": [
+            "The tags.0 field must be a string."
+          ]
+        }
+      },
+      "latency": 340
+    },
+    {
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772723206725",
+      "request_url": "https://api.shipsgo.com/v2/ocean/shipments",
+      "request_headers": {
+        "X-Shipsgo-User-Token": "***",
+        "Content-Type": "application/json"
+      },
+      "request_body": {
+        "reference": "",
+        "container_number": "",
+        "booking_number": "CSA0418719",
+        "carrier": ""
+      },
+      "created_at": "2026-03-05T15:08:40.100Z",
+      "response_status": 409,
+      "response_body": {
+        "message": "ALREADY_EXISTS",
+        "shipment": {
+          "id": 5940906,
+          "reference": null,
+          "booking_number": "CSA0418719",
+          "container_number": "TIIU2909214"
+        }
+      },
+      "latency": 282
+    },
+    {
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772723206725",
+      "request_url": "https://api.shipsgo.com/v2/ocean/shipments",
+      "request_headers": {
+        "X-Shipsgo-User-Token": "***",
+        "Content-Type": "application/json"
+      },
+      "request_body": {
+        "reference": "",
+        "container_number": "",
+        "booking_number": "CSA0418719",
+        "carrier": "CMDU"
+      },
+      "created_at": "2026-03-05T15:10:50.045Z",
+      "response_status": 409,
+      "response_body": {
+        "message": "ALREADY_EXISTS",
+        "shipment": {
+          "id": 5940906,
+          "reference": null,
+          "booking_number": "CSA0418719",
+          "container_number": "TIIU2909214"
+        }
+      },
+      "latency": 186
+    },
+    {
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "request_url": "https://api.shipsgo.com/v2/ocean/shipments/5940906",
+      "request_headers": {
+        "X-Shipsgo-User-Token": "***",
+        "Content-Type": "application/json"
+      },
+      "request_body": {},
+      "created_at": "2026-03-05T15:43:23.070Z",
+      "response_status": 200,
+      "response_body": {
+        "message": "SUCCESS",
+        "shipment": {
+          "id": 5940906,
+          "reference": null,
+          "booking_number": "CSA0418719",
+          "container_number": "TIIU2909214",
+          "container_count": 1,
+          "carrier": {
+            "scac": "CMDU",
+            "name": "CMA CGM"
+          },
+          "status": "SAILING",
+          "route": {
+            "port_of_loading": {
+              "location": {
+                "code": "MACAS",
+                "name": "CASABLANCA",
+                "timezone": "Africa/Casablanca",
+                "country": {
+                  "code": "MA",
+                  "name": "Morocco"
+                }
+              },
+              "date_of_loading": "2026-02-27T12:00:00+00:00",
+              "date_of_loading_initial": "2026-02-27T12:00:00+00:00"
+            },
+            "ts_count": 1,
+            "port_of_discharge": {
+              "location": {
+                "code": "GEPTI",
+                "name": "POTI",
+                "timezone": "Asia/Tbilisi",
+                "country": {
+                  "code": "GE",
+                  "name": "Georgia"
+                }
+              },
+              "date_of_discharge": "2026-04-02T12:00:00+04:00",
+              "date_of_discharge_initial": "2026-04-02T12:00:00+04:00"
+            },
+            "transit_time": 34,
+            "transit_percentage": 20,
+            "co2_emission": 0.75
+          },
+          "containers": [
+            {
+              "number": "TIIU2909214",
+              "status": "SAILING",
+              "size": 20,
+              "type": "DC",
+              "movements": [
+                {
+                  "event": "EMSH",
+                  "status": "ACT",
+                  "location": {
+                    "code": "MACAS",
+                    "name": "CASABLANCA",
+                    "timezone": "Africa/Casablanca",
+                    "country": {
+                      "code": "MA",
+                      "name": "Morocco"
+                    }
+                  },
+                  "vessel": null,
+                  "voyage": null,
+                  "timestamp": "2026-02-09T12:00:00+01:00"
+                },
+                {
+                  "event": "GTIN",
+                  "status": "ACT",
+                  "location": {
+                    "code": "MACAS",
+                    "name": "CASABLANCA",
+                    "timezone": "Africa/Casablanca",
+                    "country": {
+                      "code": "MA",
+                      "name": "Morocco"
+                    }
+                  },
+                  "vessel": null,
+                  "voyage": null,
+                  "timestamp": "2026-02-10T12:00:00+01:00"
+                },
+                {
+                  "event": "LOAD",
+                  "status": "ACT",
+                  "location": {
+                    "code": "MACAS",
+                    "name": "CASABLANCA",
+                    "timezone": "Africa/Casablanca",
+                    "country": {
+                      "code": "MA",
+                      "name": "Morocco"
+                    }
+                  },
+                  "vessel": {
+                    "name": "CMA CGM TOPAZ",
+                    "imo": 9397602
+                  },
+                  "voyage": "1BM1CN1MA",
+                  "timestamp": "2026-02-27T12:00:00+00:00"
+                },
+                {
+                  "event": "DEPA",
+                  "status": "ACT",
+                  "location": {
+                    "code": "MACAS",
+                    "name": "CASABLANCA",
+                    "timezone": "Africa/Casablanca",
+                    "country": {
+                      "code": "MA",
+                      "name": "Morocco"
+                    }
+                  },
+                  "vessel": {
+                    "name": "CMA CGM TOPAZ",
+                    "imo": 9397602
+                  },
+                  "voyage": "1BM1CN1MA",
+                  "timestamp": "2026-02-27T12:00:00+00:00"
+                },
+                {
+                  "event": "ARRV",
+                  "status": "EST",
+                  "location": {
+                    "code": "TRIST",
+                    "name": "ISTANBUL (AMBARLI)",
+                    "timezone": "Europe/Istanbul",
+                    "country": {
+                      "code": "TR",
+                      "name": "Turkiye"
+                    }
+                  },
+                  "vessel": {
+                    "name": "CMA CGM TOPAZ",
+                    "imo": 9397602
+                  },
+                  "voyage": "1BM1CN1MA",
+                  "timestamp": "2026-03-16T12:00:00+03:00"
+                },
+                {
+                  "event": "DEPA",
+                  "status": "EST",
+                  "location": {
+                    "code": "TRIST",
+                    "name": "ISTANBUL (AMBARLI)",
+                    "timezone": "Europe/Istanbul",
+                    "country": {
+                      "code": "TR",
+                      "name": "Turkiye"
+                    }
+                  },
+                  "vessel": {
+                    "name": "STEEN",
+                    "imo": 9360996
+                  },
+                  "voyage": "0ULBXN1MA",
+                  "timestamp": "2026-03-25T12:00:00+03:00"
+                },
+                {
+                  "event": "ARRV",
+                  "status": "EST",
+                  "location": {
+                    "code": "GEPTI",
+                    "name": "POTI",
+                    "timezone": "Asia/Tbilisi",
+                    "country": {
+                      "code": "GE",
+                      "name": "Georgia"
+                    }
+                  },
+                  "vessel": {
+                    "name": "STEEN",
+                    "imo": 9360996
+                  },
+                  "voyage": "0ULBXN1MA",
+                  "timestamp": "2026-04-02T12:00:00+04:00"
+                },
+                {
+                  "event": "DISC",
+                  "status": "EST",
+                  "location": {
+                    "code": "GEPTI",
+                    "name": "POTI",
+                    "timezone": "Asia/Tbilisi",
+                    "country": {
+                      "code": "GE",
+                      "name": "Georgia"
+                    }
+                  },
+                  "vessel": {
+                    "name": "STEEN",
+                    "imo": 9360996
+                  },
+                  "voyage": "0ULBXN1MA",
+                  "timestamp": "2026-04-02T12:00:00+04:00"
+                }
+              ]
+            }
+          ],
+          "tokens": {
+            "map": "95d599b2-0f49-4ac5-93c2-c814d85de781"
+          },
+          "followers": [],
+          "tags": [],
+          "creator": {
+            "name": "Zaid LEMOUAKNI",
+            "email": "lemouakni2@gmail.com"
+          },
+          "created_at": "2026-03-05 11:45:22",
+          "updated_at": "2026-03-05 11:46:14",
+          "checked_at": "2026-03-05 11:46:14",
+          "discarded_at": null
+        }
+      },
+      "latency": 422
+    },
+    {
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725547050",
+      "request_url": "https://api.shipsgo.com/v2/ocean/shipments/5940906/geojson",
+      "request_headers": {
+        "X-Shipsgo-User-Token": "***",
+        "Content-Type": "application/json"
+      },
+      "request_body": {},
+      "created_at": "2026-03-05T15:46:45.194Z",
+      "response_status": 405,
+      "response_body": {
+        "message": "The POST method is not supported for route v2/ocean/shipments/5940906/geojson. Supported methods: GET, HEAD."
+      },
+      "latency": 238
+    },
+    {
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725547050",
+      "request_url": "https://api.shipsgo.com/v2/ocean/shipments/5940906/geojson",
+      "request_headers": {
+        "X-Shipsgo-User-Token": "***",
+        "Content-Type": "application/json"
+      },
+      "request_body": {},
+      "created_at": "2026-03-05T15:47:57.207Z",
+      "response_status": 200,
+      "response_body": {
+        "message": "SUCCESS",
+        "geojson": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "geometry": {
+                "type": "Point",
+                "coordinates": [
+                  -7.61667,
+                  33.6
+                ]
+              },
+              "properties": {
+                "status": "PAST",
+                "location": {
+                  "code": "MACAS",
+                  "name": "CASABLANCA",
+                  "timezone": "Africa/Casablanca",
+                  "country": {
+                    "code": "MA",
+                    "name": "Morocco"
+                  }
+                }
+              }
+            },
+            {
+              "type": "Feature",
+              "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                  [
+                    -7.61667,
+                    33.6
+                  ],
+                  [
+                    -7.8635,
+                    34.0405
+                  ],
+                  [
+                    -7.1,
+                    34.4
+                  ],
+                  [
+                    -5.779375,
+                    35.933688
+                  ],
+                  [
+                    -3.5025,
+                    36.4025
+                  ],
+                  [
+                    -2.743,
+                    36.6
+                  ],
+                  [
+                    -2.1,
+                    36.6
+                  ],
+                  [
+                    -0.5585,
+                    37.5675
+                  ],
+                  [
+                    0.299188,
+                    38.62525
+                  ],
+                  [
+                    0.11284,
+                    39.381371
+                  ],
+                  [
+                    2.791,
+                    39.0735
+                  ],
+                  [
+                    4.5705,
+                    38.683
+                  ],
+                  [
+                    8.34325,
+                    37.98025
+                  ],
+                  [
+                    10.805625,
+                    37.559875
+                  ],
+                  [
+                    12.38875,
+                    37.08025
+                  ],
+                  [
+                    14.248,
+                    36.662375
+                  ],
+                  [
+                    15.906,
+                    36.4545
+                  ],
+                  [
+                    19.2345,
+                    36.338
+                  ],
+                  [
+                    21.717313,
+                    36.313438
+                  ],
+                  [
+                    23.149703,
+                    36.405344
+                  ],
+                  [
+                    23.521648,
+                    36.763766
+                  ],
+                  [
+                    25.606125,
+                    39.314563
+                  ],
+                  [
+                    26.3875,
+                    40.159
+                  ],
+                  [
+                    27.573,
+                    40.704
+                  ],
+                  [
+                    28.689,
+                    40.966
+                  ]
+                ]
+              },
+              "properties": {
+                "status": "CURRENT",
+                "vessel": {
+                  "name": "CMA CGM TOPAZ",
+                  "imo": 9397602
+                },
+                "voyage": "1BM1CN1MA",
+                "events": {
+                  "DEPA": {
+                    "location": {
+                      "code": "MACAS",
+                      "name": "CASABLANCA",
+                      "timezone": "Africa/Casablanca",
+                      "country": {
+                        "code": "MA",
+                        "name": "Morocco"
+                      }
+                    },
+                    "timestamp": "2026-02-27T12:00:00+00:00"
+                  },
+                  "ARRV": {
+                    "location": {
+                      "code": "TRIST",
+                      "name": "ISTANBUL (AMBARLI)",
+                      "timezone": "Europe/Istanbul",
+                      "country": {
+                        "code": "TR",
+                        "name": "Turkiye"
+                      }
+                    },
+                    "timestamp": "2026-03-16T12:00:00+03:00"
+                  }
+                },
+                "current": {
+                  "index": 9,
+                  "coordinates": [
+                    0.11284,
+                    39.381371
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Feature",
+              "geometry": {
+                "type": "Point",
+                "coordinates": [
+                  28.689,
+                  40.966
+                ]
+              },
+              "properties": {
+                "status": "FUTURE",
+                "location": {
+                  "code": "TRIST",
+                  "name": "ISTANBUL (AMBARLI)",
+                  "timezone": "Europe/Istanbul",
+                  "country": {
+                    "code": "TR",
+                    "name": "Turkiye"
+                  }
+                }
+              }
+            },
+            {
+              "type": "Feature",
+              "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                  [
+                    28.689,
+                    40.966
+                  ],
+                  [
+                    28.97,
+                    40.9705
+                  ],
+                  [
+                    29.207125,
+                    41.269125
+                  ],
+                  [
+                    35.2955,
+                    42.2055
+                  ],
+                  [
+                    38.78,
+                    42.209
+                  ],
+                  [
+                    41.665841,
+                    42.154309
+                  ]
+                ]
+              },
+              "properties": {
+                "status": "FUTURE",
+                "vessel": {
+                  "name": "STEEN",
+                  "imo": 9360996
+                },
+                "voyage": "0ULBXN1MA",
+                "events": {
+                  "DEPA": {
+                    "location": {
+                      "code": "TRIST",
+                      "name": "ISTANBUL (AMBARLI)",
+                      "timezone": "Europe/Istanbul",
+                      "country": {
+                        "code": "TR",
+                        "name": "Turkiye"
+                      }
+                    },
+                    "timestamp": "2026-03-25T12:00:00+03:00"
+                  },
+                  "ARRV": {
+                    "location": {
+                      "code": "GEPTI",
+                      "name": "POTI",
+                      "timezone": "Asia/Tbilisi",
+                      "country": {
+                        "code": "GE",
+                        "name": "Georgia"
+                      }
+                    },
+                    "timestamp": "2026-04-02T12:00:00+04:00"
+                  }
+                },
+                "current": null
+              }
+            },
+            {
+              "type": "Feature",
+              "geometry": {
+                "type": "Point",
+                "coordinates": [
+                  41.665841,
+                  42.154309
+                ]
+              },
+              "properties": {
+                "status": "FUTURE",
+                "location": {
+                  "code": "GEPTI",
+                  "name": "POTI",
+                  "timezone": "Asia/Tbilisi",
+                  "country": {
+                    "code": "GE",
+                    "name": "Georgia"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "latency": 272
+    }
+  ]
+}

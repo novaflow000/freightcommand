@@ -1,0 +1,5 @@
+{
+  "name": "Freight Command Center",
+  "description": "A maritime control tower application for tracking shipments and managing logistics data.",
+  "requestFramePermissions": []
+}
