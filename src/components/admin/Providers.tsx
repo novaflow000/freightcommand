@@ -311,7 +311,7 @@ export default function Providers() {
       </div>
     </div>
 
-    {showImport && (
+      {showImport && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
         <div className="bg-white rounded-xl border border-gray-200 shadow-2xl w-full max-w-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -332,6 +332,7 @@ export default function Providers() {
           </div>
         </div>
       </div>
-    )}
+      )}
+    </div>
   );
 }
