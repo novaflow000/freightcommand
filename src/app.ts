@@ -985,13 +985,54 @@ app.get('/api/v1/export/csv', (_req: Request, res: Response) => {
   }
 });
 
+// Add simple redirect endpoints for common paths
+app.get('/providers', (_req: Request, res: Response) => {
+  res.redirect('/api/v1/admin/providers');
+});
+
+app.get('/shipments', (_req: Request, res: Response) => {
+  res.redirect('/api/v1/shipments/injected');
+});
+
 // --- Static frontend (Vite build) ---
 const distDir = path.join(process.cwd(), 'dist');
 if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));
 
   // Serve SPA index for any non-API route (React Router).
+  // But exclude specific API routes that should not be handled by SPA
   app.get(/^\/(?!api\/).*/, (_req: Request, res: Response) => {
     res.sendFile(path.join(distDir, 'index.html'));
   });
 }
+
+// Add root endpoint for basic server testing
+app.get('/', (_req: Request, res: Response) => {
+  res.json({
+    message: 'Freight Command API Server',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    version: '1.0',
+    endpoints: {
+      api: '/api',
+      providers: '/api/v1/admin/providers',
+      shipments: '/api/v1/shipments/injected',
+      analytics: '/api/v1/analytics/dashboard'
+    }
+  });
+});
+
+// Add simple test endpoints for verification
+app.get('/api', (_req: Request, res: Response) => {
+  res.json({
+    message: 'API Root Endpoint',
+    version: '1.0',
+    documentation: '/api/docs',
+    endpoints: [
+      '/api/v1/admin/*',
+      '/api/v1/shipments/*',
+      '/api/v1/analytics/*',
+      '/api/v1/canonical/*'
+    ]
+  });
+});
