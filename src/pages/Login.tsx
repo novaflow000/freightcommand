@@ -1,26 +1,45 @@
 import React, { useState } from 'react';
 import { Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     
-    // Simulate login process
-    setTimeout(() => {
-      if (password === 'clickup123') {
-        // Successful login - would redirect in real app
-        console.log('Login successful');
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Store auth token if provided
+        if (data.token) {
+          localStorage.setItem('authToken', data.token);
+        }
+        // Redirect to dashboard
+        navigate('/dashboard');
       } else {
-        setError('Invalid password. Please try again.');
+        setError(data.message || 'Invalid password. Please try again.');
       }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error('Login error:', err);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
