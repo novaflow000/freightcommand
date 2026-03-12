@@ -55,7 +55,7 @@ export default function ProviderEndpoints() {
 
   const buildTestPayload = (endpoint: any) => {
     const vars = new Set<string>();
-    extractVars(endpoint.body_template || endpoint.request_template || {}, vars);
+    extractVars(JSON.stringify(endpoint.body_template || endpoint.request_template || {}), vars);
     extractVars(endpoint.headers_json || {}, vars);
     extractVars(endpoint.query_params_json || {}, vars);
     extractPathVars(endpoint.path || '').forEach((v) => vars.add(v));
