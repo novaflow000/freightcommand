@@ -46,8 +46,19 @@ export class DataMappingEngine {
     return this.collectMatches(obj[head], rest, indexes);
   }
 
-  private applyTransform(value: any, transform?: string) {
+  private applyTransform(value: any, transform?: string, customFn?: string) {
     if (value === undefined) return value;
+    
+    // Apply custom transformation function if provided
+    if (customFn) {
+      try {
+        const fn = new Function('value', customFn);
+        return fn(value);
+      } catch (err) {
+        console.error('Custom transform function failed:', err);
+      }
+    }
+
     switch (transform) {
       case 'date':
         try {
@@ -129,7 +140,30 @@ export class DataMappingEngine {
       const arrays = this.extractArrays(segments);
 
       matches.forEach((match) => {
-        const transformed = this.applyTransform(match.value, m.transformation);
+        let value = match.value;
+        
+        // Apply default value if field is missing
+        if (value === undefined || value === null) {
+          if (m.default_value !== undefined) {
+            value = m.default_value;
+          } else if (m.required) {
+            console.warn(`Required field missing: ${m.external_field}`);
+            return;
+          } else {
+            return;
+          }
+        }
+
+        // Validate with regex if provided
+        if (m.validation_regex && typeof value === 'string') {
+          const regex = new RegExp(m.validation_regex);
+          if (!regex.test(value)) {
+            console.warn(`Validation failed for ${m.external_field}: ${value}`);
+            return;
+          }
+        }
+
+        const transformed = this.applyTransform(value, m.transformation, m.custom_transform_fn);
         const containerIdx = this.getArrayIndex(arrays, 'containers', match.indexes);
         const movementIdx = this.getArrayIndex(arrays, 'movements', match.indexes);
         const featureIdx = this.getArrayIndex(arrays, 'features', match.indexes);
@@ -257,6 +291,29 @@ export class ProviderExecutor {
     return base;
   }
 
+  private async executeWithRetry(
+    config: AxiosRequestConfig,
+    retries: number,
+    delay: number,
+  ): Promise<any> {
+    let lastError: any;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await axios.request(config);
+      } catch (err: any) {
+        lastError = err;
+        if (attempt < retries) {
+          // Don't retry on 4xx errors (client errors)
+          if (err?.response?.status && err.response.status >= 400 && err.response.status < 500) {
+            throw err;
+          }
+          await new Promise(resolve => setTimeout(resolve, delay * (attempt + 1)));
+        }
+      }
+    }
+    throw lastError;
+  }
+
   public async executeProviderRequest(
     provider_id: string,
     endpoint_name: string,
@@ -289,18 +346,22 @@ export class ProviderExecutor {
     const body = interpolate(bodyTpl, vars);
 
     const url = this.resolvePath(provider.base_url, endpoint.path, vars);
+    const timeout = endpoint.timeout_ms || provider.timeout_ms || 15000;
     const config: AxiosRequestConfig = {
       url,
       method: endpoint.method,
       headers,
       data: endpoint.method === 'GET' ? undefined : body,
       params: query,
-      timeout: 15000,
+      timeout,
     };
+
+    const retries = provider.retry_attempts ?? 3;
+    const retryDelay = provider.retry_delay_ms ?? 1000;
 
     const start = Date.now();
     try {
-      const res = await axios.request(config);
+      const res = await this.executeWithRetry(config, retries, retryDelay);
       const payload = endpoint.response_root ? res.data?.[endpoint.response_root] : res.data;
       const latency = Date.now() - start;
       // Persist log for refresh / reapply

@@ -26,6 +26,11 @@ export interface ProviderRecord {
   multi_carrier?: boolean;
   supports_container_tracking?: boolean;
   supports_bl_tracking?: boolean;
+  timeout_ms?: number;
+  retry_attempts?: number;
+  retry_delay_ms?: number;
+  rate_limit_per_minute?: number;
+  cost_per_request?: number;
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +46,11 @@ export interface ProviderEndpoint {
   body_template?: any;
   path_params?: string[];
   response_root?: string;
+  timeout_ms?: number;
+  cache_ttl_seconds?: number;
+  requires_auth?: boolean;
+  version?: string;
+  description?: string;
   created_at: string;
 }
 
@@ -53,6 +63,11 @@ export interface ProviderFieldMapping {
   domain_entity: DomainEntity;
   transformation?: TransformType;
   is_array?: boolean;
+  default_value?: string;
+  required?: boolean;
+  validation_regex?: string;
+  custom_transform_fn?: string;
+  notes?: string;
   created_at: string;
 }
 
@@ -221,6 +236,11 @@ export class ProviderRegistry {
         multi_carrier INTEGER,
         supports_container_tracking INTEGER,
         supports_bl_tracking INTEGER,
+        timeout_ms INTEGER,
+        retry_attempts INTEGER,
+        retry_delay_ms INTEGER,
+        rate_limit_per_minute INTEGER,
+        cost_per_request REAL,
         created_at TEXT,
         updated_at TEXT
       );
@@ -235,6 +255,11 @@ export class ProviderRegistry {
         body_template TEXT,
         path_params TEXT,
         response_root TEXT,
+        timeout_ms INTEGER,
+        cache_ttl_seconds INTEGER,
+        requires_auth INTEGER,
+        version TEXT,
+        description TEXT,
         created_at TEXT
       );
       CREATE TABLE IF NOT EXISTS mappings (
@@ -246,6 +271,11 @@ export class ProviderRegistry {
         domain_entity TEXT,
         transformation TEXT,
         is_array INTEGER,
+        default_value TEXT,
+        required INTEGER,
+        validation_regex TEXT,
+        custom_transform_fn TEXT,
+        notes TEXT,
         created_at TEXT
       );
       CREATE TABLE IF NOT EXISTS coverage (
@@ -280,6 +310,21 @@ export class ProviderRegistry {
     `);
     try { this.db.exec(`ALTER TABLE api_logs ADD COLUMN shipment_id TEXT`); } catch {}
     try { this.db.exec(`ALTER TABLE api_logs ADD COLUMN bl_number TEXT`); } catch {}
+    try { this.db.exec(`ALTER TABLE providers ADD COLUMN timeout_ms INTEGER`); } catch {}
+    try { this.db.exec(`ALTER TABLE providers ADD COLUMN retry_attempts INTEGER`); } catch {}
+    try { this.db.exec(`ALTER TABLE providers ADD COLUMN retry_delay_ms INTEGER`); } catch {}
+    try { this.db.exec(`ALTER TABLE providers ADD COLUMN rate_limit_per_minute INTEGER`); } catch {}
+    try { this.db.exec(`ALTER TABLE providers ADD COLUMN cost_per_request REAL`); } catch {}
+    try { this.db.exec(`ALTER TABLE endpoints ADD COLUMN timeout_ms INTEGER`); } catch {}
+    try { this.db.exec(`ALTER TABLE endpoints ADD COLUMN cache_ttl_seconds INTEGER`); } catch {}
+    try { this.db.exec(`ALTER TABLE endpoints ADD COLUMN requires_auth INTEGER`); } catch {}
+    try { this.db.exec(`ALTER TABLE endpoints ADD COLUMN version TEXT`); } catch {}
+    try { this.db.exec(`ALTER TABLE endpoints ADD COLUMN description TEXT`); } catch {}
+    try { this.db.exec(`ALTER TABLE mappings ADD COLUMN default_value TEXT`); } catch {}
+    try { this.db.exec(`ALTER TABLE mappings ADD COLUMN required INTEGER`); } catch {}
+    try { this.db.exec(`ALTER TABLE mappings ADD COLUMN validation_regex TEXT`); } catch {}
+    try { this.db.exec(`ALTER TABLE mappings ADD COLUMN custom_transform_fn TEXT`); } catch {}
+    try { this.db.exec(`ALTER TABLE mappings ADD COLUMN notes TEXT`); } catch {}
   }
 
   private loadFromDb() {
@@ -308,11 +353,13 @@ export class ProviderRegistry {
       query_params_json: e.query_params_json ? JSON.parse(e.query_params_json) : undefined,
       body_template: e.body_template ? JSON.parse(e.body_template) : undefined,
       path_params: e.path_params ? JSON.parse(e.path_params) : [],
+      requires_auth: e.requires_auth !== 0,
     }));
 
     this.cache.mappings = mappings.map((m: any) => ({
       ...m,
       is_array: Boolean(m.is_array),
+      required: Boolean(m.required),
     }));
 
     this.cache.coverage = coverage;
@@ -333,14 +380,14 @@ export class ProviderRegistry {
     const tx = this.db.transaction(() => {
       this.db.exec('DELETE FROM providers; DELETE FROM endpoints; DELETE FROM mappings; DELETE FROM coverage; DELETE FROM capabilities; DELETE FROM health; DELETE FROM api_logs;');
       const insertProvider = this.db.prepare(`INSERT OR REPLACE INTO providers
-        (id, name, base_url, auth_type, api_key, client_id, client_secret, headers_json, is_active, priority, multi_carrier, supports_container_tracking, supports_bl_tracking, created_at, updated_at)
-        VALUES (@id, @name, @base_url, @auth_type, @api_key, @client_id, @client_secret, @headers_json, @is_active, @priority, @multi_carrier, @supports_container_tracking, @supports_bl_tracking, @created_at, @updated_at)`);
+        (id, name, base_url, auth_type, api_key, client_id, client_secret, headers_json, is_active, priority, multi_carrier, supports_container_tracking, supports_bl_tracking, timeout_ms, retry_attempts, retry_delay_ms, rate_limit_per_minute, cost_per_request, created_at, updated_at)
+        VALUES (@id, @name, @base_url, @auth_type, @api_key, @client_id, @client_secret, @headers_json, @is_active, @priority, @multi_carrier, @supports_container_tracking, @supports_bl_tracking, @timeout_ms, @retry_attempts, @retry_delay_ms, @rate_limit_per_minute, @cost_per_request, @created_at, @updated_at)`);
       const insertEndpoint = this.db.prepare(`INSERT OR REPLACE INTO endpoints
-        (id, provider_id, endpoint_name, method, path, headers_json, query_params_json, body_template, path_params, response_root, created_at)
-        VALUES (@id, @provider_id, @endpoint_name, @method, @path, @headers_json, @query_params_json, @body_template, @path_params, @response_root, @created_at)`);
+        (id, provider_id, endpoint_name, method, path, headers_json, query_params_json, body_template, path_params, response_root, timeout_ms, cache_ttl_seconds, requires_auth, version, description, created_at)
+        VALUES (@id, @provider_id, @endpoint_name, @method, @path, @headers_json, @query_params_json, @body_template, @path_params, @response_root, @timeout_ms, @cache_ttl_seconds, @requires_auth, @version, @description, @created_at)`);
       const insertMapping = this.db.prepare(`INSERT OR REPLACE INTO mappings
-        (id, provider_id, endpoint_id, external_field, internal_field, domain_entity, transformation, is_array, created_at)
-        VALUES (@id, @provider_id, @endpoint_id, @external_field, @internal_field, @domain_entity, @transformation, @is_array, @created_at)`);
+        (id, provider_id, endpoint_id, external_field, internal_field, domain_entity, transformation, is_array, default_value, required, validation_regex, custom_transform_fn, notes, created_at)
+        VALUES (@id, @provider_id, @endpoint_id, @external_field, @internal_field, @domain_entity, @transformation, @is_array, @default_value, @required, @validation_regex, @custom_transform_fn, @notes, @created_at)`);
       const insertCoverage = this.db.prepare(`INSERT OR REPLACE INTO coverage
         (id, provider_id, carrier_code) VALUES (@id, @provider_id, @carrier_code)`);
       const insertCapability = this.db.prepare(`INSERT OR REPLACE INTO capabilities
@@ -362,6 +409,11 @@ export class ProviderRegistry {
           multi_carrier: p.multi_carrier ? 1 : 0,
           supports_container_tracking: p.supports_container_tracking ? 1 : 0,
           supports_bl_tracking: p.supports_bl_tracking ? 1 : 0,
+          timeout_ms: p.timeout_ms ?? null,
+          retry_attempts: p.retry_attempts ?? null,
+          retry_delay_ms: p.retry_delay_ms ?? null,
+          rate_limit_per_minute: p.rate_limit_per_minute ?? null,
+          cost_per_request: p.cost_per_request ?? null,
         })
       );
       this.cache.endpoints.forEach((e) =>
@@ -371,12 +423,22 @@ export class ProviderRegistry {
           query_params_json: e.query_params_json ? JSON.stringify(e.query_params_json) : null,
           body_template: e.body_template ? JSON.stringify(e.body_template) : null,
           path_params: e.path_params ? JSON.stringify(e.path_params) : '[]',
+          timeout_ms: e.timeout_ms ?? null,
+          cache_ttl_seconds: e.cache_ttl_seconds ?? null,
+          requires_auth: e.requires_auth ? 1 : 0,
+          version: e.version ?? null,
+          description: e.description ?? null,
         })
       );
       this.cache.mappings.forEach((m) =>
         insertMapping.run({
           ...m,
           is_array: m.is_array ? 1 : 0,
+          default_value: m.default_value ?? null,
+          required: m.required ? 1 : 0,
+          validation_regex: m.validation_regex ?? null,
+          custom_transform_fn: m.custom_transform_fn ?? null,
+          notes: m.notes ?? null,
         })
       );
       this.cache.coverage.forEach((c) => insertCoverage.run(c));
@@ -480,6 +542,11 @@ export class ProviderRegistry {
         multi_carrier: payload.multi_carrier ?? false,
         supports_container_tracking: payload.supports_container_tracking ?? true,
         supports_bl_tracking: payload.supports_bl_tracking ?? false,
+        timeout_ms: payload.timeout_ms ?? 15000,
+        retry_attempts: payload.retry_attempts ?? 3,
+        retry_delay_ms: payload.retry_delay_ms ?? 1000,
+        rate_limit_per_minute: payload.rate_limit_per_minute ?? 60,
+        cost_per_request: payload.cost_per_request ?? 0,
         created_at: now,
         updated_at: now,
       };
@@ -498,6 +565,11 @@ export class ProviderRegistry {
         multi_carrier: payload.multi_carrier ?? record.multi_carrier,
         supports_container_tracking: payload.supports_container_tracking ?? record.supports_container_tracking,
         supports_bl_tracking: payload.supports_bl_tracking ?? record.supports_bl_tracking,
+        timeout_ms: payload.timeout_ms ?? record.timeout_ms,
+        retry_attempts: payload.retry_attempts ?? record.retry_attempts,
+        retry_delay_ms: payload.retry_delay_ms ?? record.retry_delay_ms,
+        rate_limit_per_minute: payload.rate_limit_per_minute ?? record.rate_limit_per_minute,
+        cost_per_request: payload.cost_per_request ?? record.cost_per_request,
         updated_at: now,
       });
     }
@@ -534,6 +606,11 @@ export class ProviderRegistry {
         body_template: payload.body_template ?? payload.request_template,
         path_params: payload.path_params || [],
         response_root: payload.response_root,
+        timeout_ms: payload.timeout_ms,
+        cache_ttl_seconds: payload.cache_ttl_seconds,
+        requires_auth: payload.requires_auth ?? true,
+        version: payload.version,
+        description: payload.description,
         created_at: now,
       };
       this.cache.endpoints.push(row);
@@ -547,6 +624,11 @@ export class ProviderRegistry {
         body_template: (payload.body_template ?? payload.request_template) ?? row.body_template,
         path_params: payload.path_params ?? row.path_params,
         response_root: payload.response_root ?? row.response_root,
+        timeout_ms: payload.timeout_ms ?? row.timeout_ms,
+        cache_ttl_seconds: payload.cache_ttl_seconds ?? row.cache_ttl_seconds,
+        requires_auth: payload.requires_auth ?? row.requires_auth,
+        version: payload.version ?? row.version,
+        description: payload.description ?? row.description,
       });
     }
     this.save();
@@ -581,6 +663,11 @@ export class ProviderRegistry {
         domain_entity: payload.domain_entity,
         transformation: payload.transformation,
         is_array: payload.is_array ?? payload.external_field.includes('[]'),
+        default_value: payload.default_value,
+        required: payload.required ?? false,
+        validation_regex: payload.validation_regex,
+        custom_transform_fn: payload.custom_transform_fn,
+        notes: payload.notes,
         created_at: now,
       };
       this.cache.mappings.push(row);
@@ -592,6 +679,11 @@ export class ProviderRegistry {
         transformation: payload.transformation ?? row.transformation,
         is_array: payload.is_array ?? row.is_array,
         endpoint_id: payload.endpoint_id ?? row.endpoint_id,
+        default_value: payload.default_value ?? row.default_value,
+        required: payload.required ?? row.required,
+        validation_regex: payload.validation_regex ?? row.validation_regex,
+        custom_transform_fn: payload.custom_transform_fn ?? row.custom_transform_fn,
+        notes: payload.notes ?? row.notes,
       });
     }
     this.save();
@@ -721,5 +813,121 @@ export class ProviderRegistry {
 
   public findInternalField(name: string): CanonicalField | undefined {
     return this.listInternalFields().find((f) => f.name.toLowerCase() === name.toLowerCase());
+  }
+
+  public validateProvider(provider: Partial<ProviderRecord>): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    if (!provider.name?.trim()) errors.push('Provider name is required');
+    if (!provider.base_url?.trim()) errors.push('Base URL is required');
+    if (provider.base_url && !provider.base_url.match(/^https?:\/\/.+/)) errors.push('Base URL must start with http:// or https://');
+    if (!provider.auth_type) errors.push('Auth type is required');
+    if (provider.priority !== undefined && (provider.priority < 0 || provider.priority > 100)) errors.push('Priority must be between 0 and 100');
+    if (provider.timeout_ms !== undefined && provider.timeout_ms < 1000) errors.push('Timeout must be at least 1000ms');
+    if (provider.retry_attempts !== undefined && (provider.retry_attempts < 0 || provider.retry_attempts > 10)) errors.push('Retry attempts must be between 0 and 10');
+    if (provider.rate_limit_per_minute !== undefined && provider.rate_limit_per_minute < 1) errors.push('Rate limit must be at least 1 request per minute');
+    return { valid: errors.length === 0, errors };
+  }
+
+  public validateEndpoint(endpoint: Partial<ProviderEndpoint>): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    if (!endpoint.endpoint_name?.trim()) errors.push('Endpoint name is required');
+    if (!endpoint.method) errors.push('HTTP method is required');
+    if (!endpoint.path?.trim()) errors.push('Path is required');
+    if (endpoint.path && !endpoint.path.startsWith('/')) errors.push('Path must start with /');
+    if (endpoint.timeout_ms !== undefined && endpoint.timeout_ms < 1000) errors.push('Timeout must be at least 1000ms');
+    if (endpoint.cache_ttl_seconds !== undefined && endpoint.cache_ttl_seconds < 0) errors.push('Cache TTL cannot be negative');
+    try {
+      if (endpoint.body_template && typeof endpoint.body_template === 'string') JSON.parse(endpoint.body_template);
+    } catch {
+      errors.push('Body template must be valid JSON');
+    }
+    return { valid: errors.length === 0, errors };
+  }
+
+  public validateMapping(mapping: Partial<ProviderFieldMapping>): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    if (!mapping.external_field?.trim()) errors.push('External field is required');
+    if (!mapping.internal_field?.trim()) errors.push('Internal field is required');
+    if (!mapping.domain_entity) errors.push('Domain entity is required');
+    if (mapping.validation_regex) {
+      try {
+        new RegExp(mapping.validation_regex);
+      } catch {
+        errors.push('Validation regex is invalid');
+      }
+    }
+    return { valid: errors.length === 0, errors };
+  }
+
+  public exportConfiguration(): string {
+    const config = {
+      version: '1.0',
+      exported_at: new Date().toISOString(),
+      providers: this.listProviders().map(p => ({ ...p, api_key: '***', client_secret: '***' })),
+      endpoints: this.cache.endpoints,
+      mappings: this.cache.mappings,
+      coverage: this.cache.coverage,
+      capabilities: this.cache.capabilities,
+    };
+    return JSON.stringify(config, null, 2);
+  }
+
+  public importConfiguration(jsonConfig: string): { success: boolean; message: string; imported: { providers: number; endpoints: number; mappings: number } } {
+    try {
+      const config = JSON.parse(jsonConfig);
+      let providersCount = 0;
+      let endpointsCount = 0;
+      let mappingsCount = 0;
+
+      if (config.providers) {
+        config.providers.forEach((p: any) => {
+          const validation = this.validateProvider(p);
+          if (validation.valid) {
+            this.upsertProvider(p);
+            providersCount++;
+          }
+        });
+      }
+
+      if (config.endpoints) {
+        config.endpoints.forEach((e: any) => {
+          const validation = this.validateEndpoint(e);
+          if (validation.valid) {
+            this.upsertEndpoint(e);
+            endpointsCount++;
+          }
+        });
+      }
+
+      if (config.mappings) {
+        config.mappings.forEach((m: any) => {
+          const validation = this.validateMapping(m);
+          if (validation.valid) {
+            this.upsertMapping(m);
+            mappingsCount++;
+          }
+        });
+      }
+
+      if (config.coverage) {
+        config.coverage.forEach((c: any) => this.upsertCoverage(c));
+      }
+
+      if (config.capabilities) {
+        config.capabilities.forEach((c: any) => this.upsertCapability(c));
+      }
+
+      return {
+        success: true,
+        message: 'Configuration imported successfully',
+        imported: { providers: providersCount, endpoints: endpointsCount, mappings: mappingsCount }
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `Import failed: ${err.message}`,
+        imported: { providers: 0, endpoints: 0, mappings: 0 }
+      };
+    }
   }
 }

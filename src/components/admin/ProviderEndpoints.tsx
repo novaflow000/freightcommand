@@ -4,7 +4,8 @@ import { Plus, Save, Trash2, FlaskConical, X } from 'lucide-react';
 export default function ProviderEndpoints() {
   const [providers, setProviders] = useState<any[]>([]);
   const [rows, setRows] = useState<any[]>([]);
-  const [form, setForm] = useState<any>({ provider_id: '', endpoint_name: '', method: 'POST', path: '', body_template: '{"sample":"value"}', response_root: '' });
+  const [form, setForm] = useState<any>({ provider_id: '', endpoint_name: '', method: 'POST', path: '', body_template: '{"sample":"value"}', response_root: '', timeout_ms: 15000, cache_ttl_seconds: 0, requires_auth: true, version: '1.0', description: '' });
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [testOpen, setTestOpen] = useState(false);
   const [testEndpoint, setTestEndpoint] = useState<any>(null);
   const [testPayload, setTestPayload] = useState<string>('{}');
@@ -22,15 +23,46 @@ export default function ProviderEndpoints() {
   useEffect(() => { load(); }, []);
 
   const submit = async () => {
-    const body = { ...form, body_template: JSON.parse(form.body_template || '{}') };
-    const method = form.id ? 'PUT' : 'POST';
-    const url = form.id ? `/api/v1/admin/provider-endpoints/${form.id}` : '/api/v1/admin/provider-endpoints';
-    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    await load();
-    setForm({ provider_id: '', endpoint_name: '', method: 'POST', path: '', body_template: '{"sample":"value"}', response_root: '' });
+    setValidationErrors([]);
+    try {
+      const errors: string[] = [];
+      if (!form.endpoint_name?.trim()) errors.push('Endpoint name is required');
+      if (!form.path?.trim()) errors.push('Path is required');
+      if (form.path && !form.path.startsWith('/')) errors.push('Path must start with /');
+      
+      try {
+        JSON.parse(form.body_template || '{}');
+      } catch {
+        errors.push('Body template must be valid JSON');
+      }
+
+      if (errors.length > 0) {
+        setValidationErrors(errors);
+        return;
+      }
+
+      const body = { ...form, body_template: JSON.parse(form.body_template || '{}') };
+      const method = form.id ? 'PUT' : 'POST';
+      const url = form.id ? `/api/v1/admin/provider-endpoints/${form.id}` : '/api/v1/admin/provider-endpoints';
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        setValidationErrors([error.message || 'Failed to save endpoint']);
+        return;
+      }
+
+      await load();
+      setForm({ provider_id: '', endpoint_name: '', method: 'POST', path: '', body_template: '{"sample":"value"}', response_root: '', timeout_ms: 15000, cache_ttl_seconds: 0, requires_auth: true, version: '1.0', description: '' });
+    } catch (err: any) {
+      setValidationErrors([err.message || 'Failed to save endpoint']);
+    }
   };
 
-  const edit = (row: any) => setForm({ ...row, body_template: JSON.stringify(row.body_template || row.request_template || {}, null, 2) });
+  const edit = (row: any) => {
+    setValidationErrors([]);
+    setForm({ ...row, body_template: JSON.stringify(row.body_template || row.request_template || {}, null, 2) });
+  };
   const remove = async (id: string) => { if (!confirm('Delete endpoint?')) return; await fetch(`/api/v1/admin/provider-endpoints/${id}`, { method: 'DELETE' }); load(); };
 
   const extractVars = (tpl: any, acc: Set<string>) => {
@@ -94,10 +126,19 @@ export default function ProviderEndpoints() {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">Endpoints</h3>
         <div className="flex gap-2">
-          <button onClick={() => setForm({ provider_id: '', endpoint_name: '', method: 'POST', path: '', request_template: '{"sample":"value"}', response_root: '' })} className="px-3 py-2 text-sm bg-gray-100 border border-gray-200 rounded-lg text-gray-700 inline-flex items-center gap-2"><Plus className="h-4 w-4" /> New</button>
+          <button onClick={() => { setValidationErrors([]); setForm({ provider_id: '', endpoint_name: '', method: 'POST', path: '', body_template: '{"sample":"value"}', response_root: '', timeout_ms: 15000, cache_ttl_seconds: 0, requires_auth: true, version: '1.0', description: '' }); }} className="px-3 py-2 text-sm bg-gray-100 border border-gray-200 rounded-lg text-gray-700 inline-flex items-center gap-2"><Plus className="h-4 w-4" /> New</button>
           <button onClick={submit} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg shadow-sm inline-flex items-center gap-2"><Save className="h-4 w-4" /> Save</button>
         </div>
       </div>
+
+      {validationErrors.length > 0 && (
+        <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+          <div className="text-sm font-semibold text-rose-900 mb-1">Validation Errors:</div>
+          <ul className="text-sm text-rose-700 list-disc list-inside">
+            {validationErrors.map((err, idx) => <li key={idx}>{err}</li>)}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
@@ -128,9 +169,35 @@ export default function ProviderEndpoints() {
             <label className="text-xs text-gray-500 font-semibold">Request Template (JSON)</label>
             <textarea className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" rows={6} value={form.body_template} onChange={(e) => setForm({ ...form, body_template: e.target.value })} />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">Response Root (optional)</label>
+              <input className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.response_root || ''} onChange={(e) => setForm({ ...form, response_root: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">Version</label>
+              <input className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.version || '1.0'} onChange={(e) => setForm({ ...form, version: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">Timeout (ms)</label>
+              <input type="number" min="1000" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.timeout_ms || 15000} onChange={(e) => setForm({ ...form, timeout_ms: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">Cache TTL (seconds)</label>
+              <input type="number" min="0" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.cache_ttl_seconds || 0} onChange={(e) => setForm({ ...form, cache_ttl_seconds: Number(e.target.value) })} />
+            </div>
+            <div className="flex items-end">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={form.requires_auth ?? true} onChange={(e) => setForm({ ...form, requires_auth: e.target.checked })} />
+                Requires Auth
+              </label>
+            </div>
+          </div>
           <div>
-            <label className="text-xs text-gray-500 font-semibold">Response Root (optional)</label>
-            <input className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.response_root || ''} onChange={(e) => setForm({ ...form, response_root: e.target.value })} />
+            <label className="text-xs text-gray-500 font-semibold">Description (optional)</label>
+            <textarea className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" rows={2} value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Describe what this endpoint does..." />
           </div>
         </div>
 

@@ -15,13 +15,22 @@ interface ProviderForm {
   multi_carrier?: boolean;
   supports_container_tracking?: boolean;
   supports_bl_tracking?: boolean;
+  timeout_ms?: number;
+  retry_attempts?: number;
+  retry_delay_ms?: number;
+  rate_limit_per_minute?: number;
+  cost_per_request?: number;
 }
 
 export default function Providers() {
   const [providers, setProviders] = useState<any[]>([]);
-  const [form, setForm] = useState<ProviderForm>({ name: '', base_url: '', auth_type: 'API_KEY', headers: '{}', is_active: true, priority: 10, multi_carrier: false, supports_container_tracking: true, supports_bl_tracking: false });
+  const [form, setForm] = useState<ProviderForm>({ name: '', base_url: '', auth_type: 'API_KEY', headers: '{}', is_active: true, priority: 10, multi_carrier: false, supports_container_tracking: true, supports_bl_tracking: false, timeout_ms: 15000, retry_attempts: 3, retry_delay_ms: 1000, rate_limit_per_minute: 60, cost_per_request: 0 });
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showExport, setShowExport] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importData, setImportData] = useState('');
 
   const loadProviders = async () => {
     try {
@@ -38,18 +47,80 @@ export default function Providers() {
   useEffect(() => { loadProviders(); }, []);
 
   const submit = async () => {
-    setLoading(true);
-    const body = { ...form, headers: form.headers ? JSON.parse(form.headers) : {} };
-    const method = form.id ? 'PUT' : 'POST';
-    const url = form.id ? `/api/v1/admin/providers/${form.id}` : '/api/v1/admin/providers';
-    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    await loadProviders();
-    setForm({ name: '', base_url: '', auth_type: 'API_KEY', headers: '{}', is_active: true, priority: 10, multi_carrier: false, supports_container_tracking: true, supports_bl_tracking: false });
-    setLoading(false);
+    setValidationErrors([]);
+    try {
+      const body = { ...form, headers: form.headers ? JSON.parse(form.headers) : {} };
+      
+      // Client-side validation
+      const errors: string[] = [];
+      if (!body.name?.trim()) errors.push('Provider name is required');
+      if (!body.base_url?.trim()) errors.push('Base URL is required');
+      if (body.base_url && !body.base_url.match(/^https?:\/\/.+/)) errors.push('Base URL must start with http:// or https://');
+      if (body.timeout_ms && body.timeout_ms < 1000) errors.push('Timeout must be at least 1000ms');
+      if (body.retry_attempts && (body.retry_attempts < 0 || body.retry_attempts > 10)) errors.push('Retry attempts must be between 0 and 10');
+      
+      if (errors.length > 0) {
+        setValidationErrors(errors);
+        return;
+      }
+
+      setLoading(true);
+      const method = form.id ? 'PUT' : 'POST';
+      const url = form.id ? `/api/v1/admin/providers/${form.id}` : '/api/v1/admin/providers';
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        setValidationErrors([error.message || 'Failed to save provider']);
+        setLoading(false);
+        return;
+      }
+
+      await loadProviders();
+      setForm({ name: '', base_url: '', auth_type: 'API_KEY', headers: '{}', is_active: true, priority: 10, multi_carrier: false, supports_container_tracking: true, supports_bl_tracking: false, timeout_ms: 15000, retry_attempts: 3, retry_delay_ms: 1000, rate_limit_per_minute: 60, cost_per_request: 0 });
+      setLoading(false);
+    } catch (err: any) {
+      setValidationErrors([err.message || 'Failed to save provider']);
+      setLoading(false);
+    }
   };
 
   const edit = (row: any) => {
+    setValidationErrors([]);
     setForm({ ...row, headers: JSON.stringify(row.headers || {}, null, 2) });
+  };
+
+  const exportConfig = async () => {
+    const res = await fetch('/api/v1/admin/providers/export');
+    const data = await res.text();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `provider-config-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importConfig = async () => {
+    try {
+      const res = await fetch('/api/v1/admin/providers/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: importData
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(`Import successful: ${result.imported.providers} providers, ${result.imported.endpoints} endpoints, ${result.imported.mappings} mappings`);
+        setShowImport(false);
+        setImportData('');
+        loadProviders();
+      } else {
+        alert(`Import failed: ${result.message}`);
+      }
+    } catch (err: any) {
+      alert(`Import error: ${err.message}`);
+    }
   };
 
   const toggle = async (row: any) => {
@@ -80,7 +151,13 @@ export default function Providers() {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">Providers</h3>
         <div className="flex gap-2">
-          <button onClick={() => setForm({ name: '', base_url: '', auth_type: 'API_KEY', headers: '{}', is_active: true })} className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 border border-gray-200 rounded-lg text-gray-700">
+          <button onClick={exportConfig} className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 border border-gray-200 rounded-lg text-gray-700">
+            Export Config
+          </button>
+          <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 border border-gray-200 rounded-lg text-gray-700">
+            Import Config
+          </button>
+          <button onClick={() => { setValidationErrors([]); setForm({ name: '', base_url: '', auth_type: 'API_KEY', headers: '{}', is_active: true, priority: 10, multi_carrier: false, supports_container_tracking: true, supports_bl_tracking: false, timeout_ms: 15000, retry_attempts: 3, retry_delay_ms: 1000, rate_limit_per_minute: 60, cost_per_request: 0 }); }} className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 border border-gray-200 rounded-lg text-gray-700">
             <Plus className="h-4 w-4" /> New
           </button>
           <button onClick={submit} disabled={loading} className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg shadow-sm disabled:opacity-60">
@@ -88,6 +165,15 @@ export default function Providers() {
           </button>
         </div>
       </div>
+
+      {validationErrors.length > 0 && (
+        <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+          <div className="text-sm font-semibold text-rose-900 mb-1">Validation Errors:</div>
+          <ul className="text-sm text-rose-700 list-disc list-inside">
+            {validationErrors.map((err, idx) => <li key={idx}>{err}</li>)}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-1 bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-4">
@@ -122,8 +208,30 @@ export default function Providers() {
               <input className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.client_secret || ''} onChange={(e) => setForm({ ...form, client_secret: e.target.value })} />
             </div>
             <div>
-              <label className="text-xs text-gray-500 font-semibold">Priority (lower = preferred)</label>
-              <input type="number" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.priority ?? 10} onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })} />
+              <label className="text-xs text-gray-500 font-semibold">Priority (0-100, lower = preferred)</label>
+              <input type="number" min="0" max="100" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.priority ?? 10} onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">Timeout (ms)</label>
+              <input type="number" min="1000" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.timeout_ms ?? 15000} onChange={(e) => setForm({ ...form, timeout_ms: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">Retry Attempts</label>
+              <input type="number" min="0" max="10" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.retry_attempts ?? 3} onChange={(e) => setForm({ ...form, retry_attempts: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">Retry Delay (ms)</label>
+              <input type="number" min="100" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.retry_delay_ms ?? 1000} onChange={(e) => setForm({ ...form, retry_delay_ms: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">Rate Limit (req/min)</label>
+              <input type="number" min="1" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.rate_limit_per_minute ?? 60} onChange={(e) => setForm({ ...form, rate_limit_per_minute: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">Cost per Request ($)</label>
+              <input type="number" step="0.001" min="0" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.cost_per_request ?? 0} onChange={(e) => setForm({ ...form, cost_per_request: Number(e.target.value) })} />
             </div>
             <div className="flex items-center gap-2 mt-4">
               <span className="text-xs font-semibold text-gray-500">Active</span>
@@ -202,5 +310,28 @@ export default function Providers() {
         </div>
       </div>
     </div>
+
+    {showImport && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-2xl w-full max-w-3xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-lg font-semibold text-gray-900">Import Configuration</h4>
+            <button onClick={() => setShowImport(false)} className="text-gray-400 hover:text-gray-600">×</button>
+          </div>
+          <p className="text-sm text-gray-600">Paste your exported configuration JSON below. This will merge with existing configuration.</p>
+          <textarea
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
+            rows={15}
+            value={importData}
+            onChange={(e) => setImportData(e.target.value)}
+            placeholder='{"version": "1.0", "providers": [...], ...}'
+          />
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setShowImport(false)} className="px-4 py-2 text-sm rounded border border-gray-200 text-gray-700">Cancel</button>
+            <button onClick={importConfig} className="px-4 py-2 text-sm rounded bg-indigo-600 text-white">Import</button>
+          </div>
+        </div>
+      </div>
+    )}
   );
 }

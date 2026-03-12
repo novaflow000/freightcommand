@@ -8,20 +8,22 @@ interface ScoreInput {
 }
 
 const weights = {
-  priority: 0.4,
-  success_rate: 0.3,
-  latency: 0.2,
-  cost: 0.1, // reserved
+  priority: 0.35,
+  success_rate: 0.30,
+  latency: 0.20,
+  cost: 0.15,
 };
 
 function computeScore({ provider, success_rate = 1, avg_latency_ms = 500 }: ScoreInput) {
   const priorityScore = 1 - Math.min(1, (provider.priority ?? 10) / 20); // lower priority -> closer to 1
   const successScore = Math.max(0, Math.min(1, success_rate));
   const latencyScore = 1 - Math.min(1, avg_latency_ms / 5000); // 0ms ->1, 5s ->0
+  const costScore = provider.cost_per_request ? 1 - Math.min(1, provider.cost_per_request / 1.0) : 1; // lower cost -> higher score
   return (
     priorityScore * weights.priority +
     successScore * weights.success_rate +
-    latencyScore * weights.latency
+    latencyScore * weights.latency +
+    costScore * weights.cost
   );
 }
 

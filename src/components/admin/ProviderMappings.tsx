@@ -13,7 +13,14 @@ export default function ProviderMappings() {
     domain_entity: '',
     transformation: '',
     is_array: false,
+    default_value: '',
+    required: false,
+    validation_regex: '',
+    custom_transform_fn: '',
+    notes: '',
   });
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [endpoints, setEndpoints] = useState<any[]>([]);
   const [selectedEndpoint, setSelectedEndpoint] = useState<string>('');
   const [externalFilter, setExternalFilter] = useState<string>('');
@@ -44,19 +51,54 @@ export default function ProviderMappings() {
   useEffect(() => { load(); loadInternal(); }, []);
 
   const submit = async () => {
-    const method = form.id ? 'PUT' : 'POST';
-    const url = form.id ? `/api/v1/admin/provider-mappings/${form.id}` : '/api/v1/admin/provider-mappings';
-    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-    await load();
-    setForm({
-      provider_id: '',
-      endpoint_id: '',
-      external_field: '',
-      internal_field: '',
-      domain_entity: '',
-      transformation: '',
-      is_array: false,
-    });
+    setValidationErrors([]);
+    try {
+      const errors: string[] = [];
+      if (!form.external_field?.trim()) errors.push('External field is required');
+      if (!form.internal_field?.trim()) errors.push('Internal field is required');
+      if (!form.domain_entity) errors.push('Domain entity is required');
+      
+      if (form.validation_regex) {
+        try {
+          new RegExp(form.validation_regex);
+        } catch {
+          errors.push('Validation regex is invalid');
+        }
+      }
+
+      if (errors.length > 0) {
+        setValidationErrors(errors);
+        return;
+      }
+
+      const method = form.id ? 'PUT' : 'POST';
+      const url = form.id ? `/api/v1/admin/provider-mappings/${form.id}` : '/api/v1/admin/provider-mappings';
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        setValidationErrors([error.message || 'Failed to save mapping']);
+        return;
+      }
+
+      await load();
+      setForm({
+        provider_id: '',
+        endpoint_id: '',
+        external_field: '',
+        internal_field: '',
+        domain_entity: '',
+        transformation: '',
+        is_array: false,
+        default_value: '',
+        required: false,
+        validation_regex: '',
+        custom_transform_fn: '',
+        notes: '',
+      });
+    } catch (err: any) {
+      setValidationErrors([err.message || 'Failed to save mapping']);
+    }
   };
 
   const edit = (row: any) => setForm({ ...row });
@@ -97,6 +139,7 @@ export default function ProviderMappings() {
         <div className="flex gap-2">
           <button
             onClick={() =>
+              setValidationErrors([]);
               setForm({
                 provider_id: '',
                 endpoint_id: '',
@@ -105,6 +148,11 @@ export default function ProviderMappings() {
                 domain_entity: '',
                 transformation: '',
                 is_array: false,
+                default_value: '',
+                required: false,
+                validation_regex: '',
+                custom_transform_fn: '',
+                notes: '',
               })
             }
             className="px-3 py-2 text-sm bg-gray-100 border border-gray-200 rounded-lg text-gray-700 inline-flex items-center gap-2"
@@ -114,6 +162,15 @@ export default function ProviderMappings() {
           <button onClick={submit} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg shadow-sm inline-flex items-center gap-2"><Save className="h-4 w-4" /> Save</button>
         </div>
       </div>
+
+      {validationErrors.length > 0 && (
+        <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+          <div className="text-sm font-semibold text-rose-900 mb-1">Validation Errors:</div>
+          <ul className="text-sm text-rose-700 list-disc list-inside">
+            {validationErrors.map((err, idx) => <li key={idx}>{err}</li>)}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
@@ -176,10 +233,42 @@ export default function ProviderMappings() {
               </select>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="is_array" checked={form.is_array || false} onChange={(e) => setForm({ ...form, is_array: e.target.checked })} />
-            <label htmlFor="is_array" className="text-sm text-gray-600">External field is an array (contains [])</label>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={form.is_array || false} onChange={(e) => setForm({ ...form, is_array: e.target.checked })} />
+                Is Array
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={form.required || false} onChange={(e) => setForm({ ...form, required: e.target.checked })} />
+                Required
+              </label>
+            </div>
+            <button onClick={() => setShowAdvanced(!showAdvanced)} className="text-xs text-indigo-600 font-semibold">
+              {showAdvanced ? 'Hide' : 'Show'} Advanced Options
+            </button>
           </div>
+
+          {showAdvanced && (
+            <>
+              <div>
+                <label className="text-xs text-gray-500 font-semibold">Default Value (if missing)</label>
+                <input className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.default_value || ''} onChange={(e) => setForm({ ...form, default_value: e.target.value })} placeholder="e.g., N/A or 0" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-semibold">Validation Regex (optional)</label>
+                <input className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" value={form.validation_regex || ''} onChange={(e) => setForm({ ...form, validation_regex: e.target.value })} placeholder="e.g., ^[A-Z]{4}\d{7}$" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-semibold">Custom Transform Function (JavaScript)</label>
+                <textarea className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" rows={3} value={form.custom_transform_fn || ''} onChange={(e) => setForm({ ...form, custom_transform_fn: e.target.value })} placeholder="return value.toUpperCase();" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-semibold">Notes</label>
+                <textarea className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" rows={2} value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Add any notes about this mapping..." />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">

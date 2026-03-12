@@ -35,13 +35,26 @@ export interface AdminSettings {
   };
 }
 
+export interface RouterSettings {
+  enable_failover: boolean;
+  max_failover_attempts: number;
+  prefer_low_cost: boolean;
+  prefer_low_latency: boolean;
+  cost_weight: number;
+  latency_weight: number;
+  priority_weight: number;
+  success_rate_weight: number;
+}
+
 export class SettingsManager {
   private settingsPath: string;
   private settings: AdminSettings;
+  private routerSettings: RouterSettings;
 
   constructor() {
     this.settingsPath = path.join(process.cwd(), 'data', 'settings.json');
     this.settings = this.loadSettings();
+    this.routerSettings = this.loadRouterSettings();
   }
 
   private loadSettings(): AdminSettings {
@@ -109,5 +122,54 @@ export class SettingsManager {
     } catch (error) {
       console.error('Error saving settings:', error);
     }
+  }
+
+  private loadRouterSettings(): RouterSettings {
+    const routerPath = path.join(process.cwd(), 'data', 'router-settings.json');
+    if (!fs.existsSync(routerPath)) {
+      return {
+        enable_failover: true,
+        max_failover_attempts: 3,
+        prefer_low_cost: false,
+        prefer_low_latency: true,
+        cost_weight: 0.15,
+        latency_weight: 0.20,
+        priority_weight: 0.35,
+        success_rate_weight: 0.30,
+      };
+    }
+    try {
+      return JSON.parse(fs.readFileSync(routerPath, 'utf-8'));
+    } catch {
+      return {
+        enable_failover: true,
+        max_failover_attempts: 3,
+        prefer_low_cost: false,
+        prefer_low_latency: true,
+        cost_weight: 0.15,
+        latency_weight: 0.20,
+        priority_weight: 0.35,
+        success_rate_weight: 0.30,
+      };
+    }
+  }
+
+  public getRouterSettings(): RouterSettings {
+    return this.routerSettings;
+  }
+
+  public updateRouterSettings(settings: Partial<RouterSettings>): RouterSettings {
+    this.routerSettings = { ...this.routerSettings, ...settings };
+    const routerPath = path.join(process.cwd(), 'data', 'router-settings.json');
+    try {
+      const dir = path.dirname(routerPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(routerPath, JSON.stringify(this.routerSettings, null, 2));
+    } catch (error) {
+      console.error('Error saving router settings:', error);
+    }
+    return this.routerSettings;
   }
 }
