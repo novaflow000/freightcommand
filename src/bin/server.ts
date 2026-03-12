@@ -19,6 +19,7 @@ async function runHealthChecks() {
         last_checked_at: new Date().toISOString(),
       });
     } catch (err: any) {
+      console.error(`Health check failed for provider ${p.name}:`, err.message);
       providerRegistry.upsertHealth({
         provider_id: p.id,
         success_rate: 0,

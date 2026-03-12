@@ -128,6 +128,9 @@ export class ProviderRegistry {
     this.ensureTables();
     const secret = process.env.PROVIDER_SECRET || 'freight-command-secret-key';
     this.encryptionKey = crypto.createHash('sha256').update(secret).digest();
+    if (this.encryptionKey.length !== 32) {
+      throw new Error('Invalid encryption key length. Key must be 256 bits.');
+    }
     this.loadFromDb();
     // If database is empty, seed from JSON file once
     if (!this.cache.providers.length) {
@@ -404,14 +407,19 @@ export class ProviderRegistry {
 
   private dec(value?: string): string | undefined {
     if (!value) return undefined;
-    const raw = Buffer.from(value, 'base64');
-    const iv = raw.subarray(0, 12);
-    const tag = raw.subarray(12, 28);
-    const data = raw.subarray(28);
-    const decipher = crypto.createDecipheriv('aes-256-gcm', this.encryptionKey, iv);
-    decipher.setAuthTag(tag);
-    const dec = Buffer.concat([decipher.update(data), decipher.final()]);
-    return dec.toString('utf8');
+    try {
+      const raw = Buffer.from(value, 'base64');
+      const iv = raw.subarray(0, 12);
+      const tag = raw.subarray(12, 28);
+      const data = raw.subarray(28);
+      const decipher = crypto.createDecipheriv('aes-256-gcm', this.encryptionKey, iv);
+      decipher.setAuthTag(tag);
+      const dec = Buffer.concat([decipher.update(data), decipher.final()]);
+      return dec.toString('utf8');
+    } catch (err) {
+      console.error('Decryption failed:', err);
+      return undefined;
+    }
   }
 
   private inferDomain(name: string, externalField?: string): DomainEntity {
