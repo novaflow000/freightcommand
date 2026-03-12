@@ -999,6 +999,7 @@ app.get('/providers', (_req: Request, res: Response) => {
 
 app.get('/shipments', (_req: Request, res: Response) => {
   res.redirect('/api/v1/shipments/injected');
+});
 
 // Add root endpoint for basic server testing
 app.get('/', (_req: Request, res: Response) => {
