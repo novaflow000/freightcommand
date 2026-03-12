@@ -459,7 +459,7 @@ app.post('/admin/endpoints/:id/auto-mappings', (req: Request, res: Response) => 
     if (lower.includes('shipment.status')) return { internal: 'shipment_status', domain: 'Shipment' };
     if (lower.includes('shipment.message')) return { internal: 'shipment_message', domain: 'Shipment' };
     if (lower.includes('checked_at')) return { internal: 'checked_at', domain: 'Shipment', transformation: 'date' };
-    if (lower.includes('created_at')) return { internal: 'created_at', domain: 'Shipment', transformation: 'date' });
+    if (lower.includes('created_at')) return { internal: 'created_at', domain: 'Shipment', transformation: 'date' };
     if (lower.includes('updated_at')) return { internal: 'updated_at', domain: 'Shipment', transformation: 'date' };
 
     // Carrier
@@ -1001,21 +1001,6 @@ app.get('/shipments', (_req: Request, res: Response) => {
   res.redirect('/api/v1/shipments/injected');
 });
 
-// Add root endpoint for basic server testing
-app.get('/', (_req: Request, res: Response) => {
-  res.json({
-    message: 'Freight Command API Server',
-    status: 'running',
-    timestamp: new Date().toISOString(),
-    version: '1.0',
-    endpoints: {
-      api: '/api',
-      providers: '/api/v1/admin/providers',
-      shipments: '/api/v1/shipments/injected',
-      analytics: '/api/v1/analytics/dashboard'
-    }
-  });
-});
 
 // Add simple test endpoints for verification
 app.get('/api', (_req: Request, res: Response) => {
