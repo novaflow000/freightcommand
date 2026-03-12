@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Save, ToggleLeft, ToggleRight, Trash2, Key, Link as LinkIcon } from 'lucide-react';
 
 interface ProviderForm {
