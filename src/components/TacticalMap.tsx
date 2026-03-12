@@ -10,12 +10,14 @@ interface TacticalMapProps {
 }
 
 // Vessel status icon
+const normalizeStatus = (status: string) => (status || '').toUpperCase().replace(/[\s-]+/g, '_');
+
 const createStatusIcon = (status: string) => {
-  const norm = (status || '').toUpperCase();
+  const norm = normalizeStatus(status);
   let color = '#3b82f6'; // default indigo-500
   if (norm === 'ARRIVED' || norm === 'DELIVERED') color = '#10b981';
-  else if (norm === 'IN TRANSIT') color = '#6366f1';
-  else if (norm === 'DELAYED' || norm === 'EXCEPTION') color = '#e11d48';
+  else if (norm === 'IN_TRANSIT') color = '#6366f1';
+  else if (norm === 'DELAYED' || norm === 'EXCEPTION' || norm === 'HOLD') color = '#e11d48';
 
   const size = 16;
   const half = size / 2;
@@ -117,6 +119,11 @@ export default function TacticalMap({ shipments }: TacticalMapProps) {
           const midIdx = Math.floor(routePoints.length / 2);
           vesselPos = routePoints[midIdx];
         }
+      } else if (routePoints.length >= 2) {
+        // Synthesize an at-sea position so the map always shows a vessel triangle
+        const midIdx = Math.floor(routePoints.length / 2);
+        const [lat, lng] = routePoints[midIdx];
+        vesselPos = jitter(lat, lng, shipment.bl_number || shipment.id || '');
       }
 
       // Polyline for route
@@ -131,7 +138,7 @@ export default function TacticalMap({ shipments }: TacticalMapProps) {
               color: highlighted ? '#7c3aed' : '#4f46e5',
               weight: highlighted ? 4 : 2.5,
               dashArray: highlighted ? undefined : '8 6',
-              opacity: status?.toUpperCase() === 'DELAYED' ? 0.7 : 0.6,
+              opacity: normalizeStatus(status) === 'DELAYED' ? 0.7 : 0.6,
               lineCap: 'round',
               lineJoin: 'round',
             }}
@@ -177,9 +184,9 @@ export default function TacticalMap({ shipments }: TacticalMapProps) {
                   <span
                     className={cn(
                       'text-[10px] px-1.5 py-0.5 rounded-full uppercase tracking-wider font-bold',
-                      status?.toUpperCase() === 'DELIVERED' || status?.toUpperCase() === 'ARRIVED'
+                      normalizeStatus(status) === 'DELIVERED' || normalizeStatus(status) === 'ARRIVED'
                         ? 'bg-emerald-50 text-emerald-600'
-                        : status?.toUpperCase() === 'DELAYED'
+                        : normalizeStatus(status) === 'DELAYED'
                           ? 'bg-rose-50 text-rose-600'
                           : 'bg-indigo-50 text-indigo-600',
                     )}
@@ -214,9 +221,12 @@ export default function TacticalMap({ shipments }: TacticalMapProps) {
     }
   }, [bounds, shipments]);
 
+  const mapKey = useMemo(() => shipments.map((s) => s.bl_number || s.id || '').join('|'), [shipments]);
+
   return (
     <div className="relative w-full h-full bg-gray-50 min-h-[520px]">
       <MapContainer
+        key={mapKey}
         center={[20, 0]}
         zoom={2}
         bounds={bounds}

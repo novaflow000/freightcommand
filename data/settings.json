@@ -35,17 +35,17 @@
   "status": {
     "hapagLloyd": {
       "status": "missing",
-      "lastValidated": "2026-03-09T15:51:35.894Z",
+      "lastValidated": "2026-03-12T11:08:50.201Z",
       "message": "API key/secret missing"
     },
     "maersk": {
       "status": "simulated",
-      "lastValidated": "2026-03-09T15:51:35.894Z",
+      "lastValidated": "2026-03-12T11:08:50.201Z",
       "message": "Using simulated data (API not reachable)"
     },
     "cmaCgm": {
       "status": "missing",
-      "lastValidated": "2026-03-09T15:51:35.894Z",
+      "lastValidated": "2026-03-12T11:08:50.201Z",
       "message": "API key/secret missing"
     },
     "shipsGo": {

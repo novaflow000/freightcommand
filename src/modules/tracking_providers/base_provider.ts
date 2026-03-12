@@ -76,6 +76,7 @@ export abstract class BaseTrackingProvider implements TrackingProvider {
     return {
       tracking_id,
       status: 'In Transit',
+      simulated: true,
       eta: new Date(now + 1000 * 60 * 60 * 24 * 12).toISOString(),
       location: {lat: sampleRoute[1][0], lng: sampleRoute[1][1], name: 'Mid-Atlantic'},
       events: [

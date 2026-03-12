@@ -239,7 +239,7 @@ export class CanonicalDataService {
     };
 
     all.forEach((s) => {
-      const status = (s.shipment.shipment_status || 'unknown').toLowerCase();
+      const status = (s.shipment.shipment_status || 'unknown').toLowerCase().replace(/[\s-]+/g, '_');
       const carrier = s.carrier?.carrier_name || s.carrier?.carrier_code || 'Unknown';
       const routeKey = `${s.route?.origin_port_name || 'Unknown'} → ${s.route?.destination_port_name || 'Unknown'}`;
 
@@ -250,7 +250,7 @@ export class CanonicalDataService {
 
       if (status.includes('arrived') || status.includes('delivered')) snapshot.delivered += 1;
       else snapshot.active += 1;
-      if (status.includes('delay') || status.includes('exception')) snapshot.delayed += 1;
+      if (status.includes('delay') || status.includes('exception') || status.includes('hold')) snapshot.delayed += 1;
     });
 
     return snapshot;

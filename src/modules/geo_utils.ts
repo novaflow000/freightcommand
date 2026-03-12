@@ -44,6 +44,12 @@ export const PORT_COORDINATES: Record<string, [number, number]> = {
   'Le Havre': [49.4944, 0.1079],
   'Antalya': [36.8969, 30.7133],
   'Abidjan': [5.3097, -4.0127],
+  'Vancouver': [49.2827, -123.1207],
+  'Montreal': [45.5019, -73.5674],
+  'Halifax': [44.6488, -63.5752],
+  'Seattle': [47.6062, -122.3321],
+  'Oakland': [37.8044, -122.2711],
+  'Ho Chi Minh': [10.8231, 106.6297],
 };
 
 const toKey = (name?: string) => (name || '').trim().toLowerCase();

@@ -27,7 +27,12 @@ export default function Dashboard() {
         fetchCanonicalAnalytics(),
       ]);
       setCanonicalShipments(ship);
-      setStats(analytics);
+      // Derive stats client-side to stay in lock-step with the list data
+      const derived = deriveStats(ship);
+      setStats({
+        ...analytics,
+        ...derived,
+      });
     } catch (err) {
       console.error(err);
     } finally {
@@ -169,4 +174,29 @@ export default function Dashboard() {
       )}
     </div>
   );
+}
+
+// Keep status logic in one place for KPIs
+function deriveStats(shipments: any[]) {
+  const stats = {
+    total: shipments.length,
+    in_transit: 0,
+    arrived: 0,
+    delayed: 0,
+    exceptions: 0,
+    total_value: 0,
+    performance: 0,
+    last_updated: new Date().toISOString(),
+  };
+
+  shipments.forEach((s) => {
+    const status = (s.shipment?.shipment_status || s.current_status || '').toUpperCase().replace(/[\s-]+/g, '_');
+    stats.total_value += Number(s.cargo_value || s.route?.cargo_value || 0);
+    if (status === 'ARRIVED' || status === 'DELIVERED') stats.arrived += 1;
+    else if (status === 'IN_TRANSIT') stats.in_transit += 1;
+    else if (status === 'DELAYED' || status === 'EXCEPTION' || status === 'HOLD') stats.delayed += 1;
+  });
+
+  stats.performance = stats.total === 0 ? 0 : Math.round((stats.arrived / stats.total) * 100);
+  return stats;
 }

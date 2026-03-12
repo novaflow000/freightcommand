@@ -187,7 +187,7 @@ export class DataFusionEngine {
         origin: shipment.origin,
         destination: shipment.destination,
         incoterm: shipment.incoterm,
-        geometry: routeData?.route_geometry,
+        geometry: routeData?.route_geometry || trackingData.route?.route_geometry,
       },
       tracking: {
         container_number: shipment.container_number,
@@ -217,14 +217,38 @@ export class DataFusionEngine {
       },
     };
 
-    // Derive a plausible position when API location is missing/simulated/invalid
-    const derivedLocation = deriveInTransitLocation(
+    const isSimulated = Boolean((trackingData as any).simulated);
+    if (isSimulated) {
+      usedFallback = true;
+      // Preserve injected status/eta when we're in simulated mode so KPIs reflect fixtures
+      if (shipment.status) trackingData.status = shipment.status;
+      if (shipment.eta) trackingData.eta = shipment.eta;
+    }
+
+    // Build a lightweight route geometry when none is provided
+    const originPort = getPortCoordinates(shipment.origin);
+    const destPort = getPortCoordinates(shipment.destination);
+    const inferredMidpoint = deriveInTransitLocation(
       shipment.origin,
       shipment.destination,
       shipment.bl_number,
     );
-    const destPort = getPortCoordinates(shipment.destination);
-    const originPort = getPortCoordinates(shipment.origin);
+    if (!routeData?.route_geometry && originPort && destPort) {
+      const mid = inferredMidpoint || {
+        lat: (originPort[0] + destPort[0]) / 2,
+        lng: (originPort[1] + destPort[1]) / 2,
+      };
+      trackingData.route = trackingData.route || {};
+      trackingData.route.route_geometry = [
+        originPort,
+        [mid.lat, mid.lng],
+        destPort,
+      ];
+      routeData = trackingData.route;
+    }
+
+    // Derive a plausible position when API location is missing/simulated/invalid
+    const derivedLocation = inferredMidpoint;
 
     const hasValidLocation =
       trackingData.location &&
@@ -243,9 +267,13 @@ export class DataFusionEngine {
       fusedData.tracking.location = { lat: originPort[0], lng: originPort[1] };
     }
 
+    // Harmonize status for downstream analytics
+    const statusToPersist = isSimulated ? (shipment.status || fusedData.tracking.status) : fusedData.tracking.status;
+    fusedData.tracking.status = statusToPersist || fusedData.tracking.status;
+
     // Persist last tracking snapshot to injected storage for traceability
     this.dataManager.update_shipment(shipment.bl_number, {
-      status: fusedData.tracking.status,
+      status: statusToPersist,
       eta: fusedData.tracking.eta,
       tracking_provider: fusedData.tracking.provider || shipment.tracking_provider,
       external_tracking_id: fusedData.tracking.tracking_id || shipment.external_tracking_id,

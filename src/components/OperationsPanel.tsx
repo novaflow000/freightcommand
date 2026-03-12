@@ -24,12 +24,13 @@ export default function OperationsPanel({
   const [refreshMode, setRefreshMode] = useState<'reapply' | 'api' | 'full'>('api');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const normalizeStatus = (status: string) => (status || '').toUpperCase();
+  const normalizeStatus = (status: string) =>
+    (status || '').toUpperCase().replace(/[\s-]+/g, '_');
   const humanStatus = (status: string) => {
     const s = normalizeStatus(status);
     if (s === 'IN_TRANSIT') return 'In Transit';
     if (s === 'DELIVERED' || s === 'ARRIVED') return 'Delivered';
-    if (s === 'DELAYED' || s === 'EXCEPTION') return 'Delayed';
+    if (s === 'DELAYED' || s === 'EXCEPTION' || s === 'HOLD') return 'Delayed';
     return 'Unknown';
   };
 
@@ -48,7 +49,7 @@ export default function OperationsPanel({
     const s = normalizeStatus(status);
     if (s === 'DELIVERED' || s === 'ARRIVED') return 'text-emerald-700 bg-emerald-50 border-emerald-200';
     if (s === 'IN_TRANSIT') return 'text-blue-700 bg-blue-50 border-blue-200';
-    if (s === 'DELAYED' || s === 'EXCEPTION') return 'text-rose-700 bg-rose-50 border-rose-200';
+    if (s === 'DELAYED' || s === 'EXCEPTION' || s === 'HOLD') return 'text-rose-700 bg-rose-50 border-rose-200';
     return 'text-gray-600 bg-gray-100 border-gray-200';
   };
 
