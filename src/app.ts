@@ -16,7 +16,14 @@ import {canonicalDataService} from './modules/canonical_data_service.ts';
 import {TrackingQueue} from './modules/tracking_queue.ts';
 import {RefreshService} from './modules/refresh_service.ts';
 import axios from 'axios';
-import {normalizeCarrier} from './modules/carriers/carrier_mapping.ts';
+
+// Import carrier connectors
+import { HapagLloydConnector } from './modules/api_connectors/hapag_lloyd.ts';
+import { MaerskConnector } from './modules/api_connectors/maersk.ts';
+import { CmaCgmConnector } from './modules/api_connectors/cma_cgm.ts';
+
+// Import tracking providers
+import { normalizeCarrier } from './modules/carriers/carrier_mapping.ts';
 
 export const app = express();
 app.use(cors());
@@ -41,14 +48,14 @@ async function validateCarriers(): Promise<AdminSettings['status']> {
   const settings = settingsManager.getSettings();
   const now = new Date().toISOString();
 
-  const hapagConnector = new (await import('./modules/api_connectors/hapag_lloyd.ts')).HapagLloydConnector(
+  const hapagConnector = new HapagLloydConnector(
     settings.apiKeys.hapagLloyd.clientId,
     settings.apiKeys.hapagLloyd.clientSecret,
   );
-  const maerskConnector = new (await import('./modules/api_connectors/maersk.ts')).MaerskConnector(
+  const maerskConnector = new MaerskConnector(
     settings.apiKeys.maersk.apiKey,
   );
-  const cmaConnector = new (await import('./modules/api_connectors/cma_cgm.ts')).CmaCgmConnector(
+  const cmaConnector = new CmaCgmConnector(
     settings.apiKeys.cmaCgm.apiKey,
   );
 
@@ -979,7 +986,7 @@ app.get('/api/v1/export/csv', (_req: Request, res: Response) => {
     const header = Object.keys(data[0] || {}).join(',');
     const lines = data.map((row: any) => Object.values(row).join(','));
     res.setHeader('Content-Type', 'text/csv');
-    res.send([header, ...lines].join('\\n'));
+    res.send([header, ...lines].join('\n'));
   } catch (err: any) {
     res.status(500).json({error: err?.message || 'Export failed'});
   }
