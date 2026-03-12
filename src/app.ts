@@ -459,7 +459,7 @@ app.post('/admin/endpoints/:id/auto-mappings', (req: Request, res: Response) => 
     if (lower.includes('shipment.status')) return { internal: 'shipment_status', domain: 'Shipment' };
     if (lower.includes('shipment.message')) return { internal: 'shipment_message', domain: 'Shipment' };
     if (lower.includes('checked_at')) return { internal: 'checked_at', domain: 'Shipment', transformation: 'date' };
-    if (lower.includes('created_at')) return { internal: 'created_at', domain: 'Shipment', transformation: 'date' };
+    if (lower.includes('created_at')) return { internal: 'created_at', domain: 'Shipment', transformation: 'date' });
     if (lower.includes('updated_at')) return { internal: 'updated_at', domain: 'Shipment', transformation: 'date' };
 
     // Carrier
@@ -999,19 +999,6 @@ app.get('/providers', (_req: Request, res: Response) => {
 
 app.get('/shipments', (_req: Request, res: Response) => {
   res.redirect('/api/v1/shipments/injected');
-});
-
-// --- Static frontend (Vite build) ---
-const distDir = path.join(process.cwd(), 'dist');
-if (fs.existsSync(distDir)) {
-  app.use(express.static(distDir));
-
-  // Serve SPA index for any non-API route (React Router).
-  // But exclude specific API routes that should not be handled by SPA
-  app.get(/^\/(?!api\/).*/, (_req: Request, res: Response) => {
-    res.sendFile(path.join(distDir, 'index.html'));
-  });
-}
 
 // Add root endpoint for basic server testing
 app.get('/', (_req: Request, res: Response) => {
@@ -1043,3 +1030,15 @@ app.get('/api', (_req: Request, res: Response) => {
     ]
   });
 });
+
+// --- Static frontend (Vite build) ---
+const distDir = path.join(process.cwd(), 'dist');
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir));
+
+  // Serve SPA index for any non-API route (React Router).
+  // But exclude specific API routes that should not be handled by SPA
+  app.get(/^\/(?!api\/).*/, (_req: Request, res: Response) => {
+    res.sendFile(path.join(distDir, 'index.html'));
+  });
+}
