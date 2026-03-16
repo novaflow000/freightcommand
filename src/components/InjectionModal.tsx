@@ -36,6 +36,7 @@ export default function InjectionModal({ isOpen, onClose, onSuccess }: Injection
   const [activeTab, setActiveTab] = useState<'manual' | 'upload'>('manual');
   const [formData, setFormData] = useState({
     bl_number: '',
+    booking_number: '',
     client: '',
     container_number: '',
     carrier: '',
@@ -51,7 +52,7 @@ export default function InjectionModal({ isOpen, onClose, onSuccess }: Injection
     tracking_provider: 'ShipsGo'
   });
   const [file, setFile] = useState<File | null>(null);
-  const [previewRows, setPreviewRows] = useState<Array<{bl_number: string; container_number: string; carrier: string; client: string}>>([]);
+  const [previewRows, setPreviewRows] = useState<Array<{bl_number: string; booking_number: string; container_number: string; carrier: string; client: string}>>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
@@ -63,8 +64,8 @@ export default function InjectionModal({ isOpen, onClose, onSuccess }: Injection
     setMessage(null);
 
     try {
-      if (!formData.container_number && !formData.bl_number && !(formData as any).booking_number) {
-        throw new Error('Provide at least one of Container, BL, or Booking number');
+      if (!formData.container_number && !formData.bl_number && !formData.booking_number) {
+        throw new Error('Provide at least one of BL, Booking, or Container number');
       }
       const res = await fetch('/api/v1/shipments/injected', {
         method: 'POST',
@@ -163,10 +164,11 @@ export default function InjectionModal({ isOpen, onClose, onSuccess }: Injection
       };
       const rows = lines.slice(1, 6).map(line => ({
         bl_number: get(line, 'bl_number') || get(line, 'bl number'),
+        booking_number: get(line, 'booking_number') || get(line, 'booking'),
         container_number: get(line, 'container_number') || get(line, 'container'),
         carrier: get(line, 'carrier'),
         client: get(line, 'client'),
-      })).filter(r => r.bl_number || r.container_number);
+      })).filter(r => r.bl_number || r.booking_number || r.container_number);
       setPreviewRows(rows);
     };
     reader.readAsText(selected);
@@ -216,17 +218,26 @@ export default function InjectionModal({ isOpen, onClose, onSuccess }: Injection
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">BL Number</label>
                 <input className="w-full bg-white border border-gray-200 rounded-lg p-2 text-gray-900 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" 
+                  placeholder="e.g. 265507346 (Maersk)"
                   value={formData.bl_number} onChange={e => setFormData({...formData, bl_number: e.target.value})} />
+              </div>
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Booking Number</label>
+                <input className="w-full bg-white border border-gray-200 rounded-lg p-2 text-gray-900 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" 
+                  placeholder="e.g. CSA0418719 (CMA CGM)"
+                  value={formData.booking_number} onChange={e => setFormData({...formData, booking_number: e.target.value})} />
               </div>
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Container Number</label>
                 <input className="w-full bg-white border border-gray-200 rounded-lg p-2 text-gray-900 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" 
+                  placeholder="e.g. CMAU1234567 (4 letters + 7 digits)"
                   value={formData.container_number} onChange={e => setFormData({...formData, container_number: e.target.value})} />
               </div>
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Carrier *</label>
                 <select required className="w-full bg-white border border-gray-200 rounded-lg p-2 text-gray-900 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-                  value={formData.carrier} onChange={e => setFormData({...formData, carrier: e.target.value})}>
+                  value={formData.carrier} onChange={e => setFormData({...formData, carrier: e.target.value})}
+                  title="Required for BL-only tracking. Pick the actual shipping line (e.g. Maersk for BL 265507346).">
                   <option value="">Select Carrier</option>
                   {carrierOptions.map((c) => (
                     <option key={c} value={c}>{c}</option>
@@ -285,7 +296,8 @@ export default function InjectionModal({ isOpen, onClose, onSuccess }: Injection
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 text-gray-500">
                         <tr>
-                          <th className="px-3 py-2 text-left">BL Number</th>
+                          <th className="px-3 py-2 text-left">BL</th>
+                          <th className="px-3 py-2 text-left">Booking</th>
                           <th className="px-3 py-2 text-left">Container</th>
                           <th className="px-3 py-2 text-left">Carrier</th>
                           <th className="px-3 py-2 text-left">Client</th>
@@ -295,6 +307,7 @@ export default function InjectionModal({ isOpen, onClose, onSuccess }: Injection
                         {previewRows.map((row, idx) => (
                           <tr key={idx} className="hover:bg-gray-50">
                             <td className="px-3 py-2 font-semibold text-gray-900">{row.bl_number || '—'}</td>
+                            <td className="px-3 py-2 text-gray-700">{row.booking_number || '—'}</td>
                             <td className="px-3 py-2 text-gray-700">{row.container_number || '—'}</td>
                             <td className="px-3 py-2 text-gray-700">{row.carrier || '—'}</td>
                             <td className="px-3 py-2 text-gray-700">{row.client || '—'}</td>

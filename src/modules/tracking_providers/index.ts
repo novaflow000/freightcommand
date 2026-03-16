@@ -10,14 +10,21 @@ const providerCache: {[key: string]: TrackingProvider} = {};
 export function getTrackingProvider(name: string | undefined, settings?: SettingsManager): TrackingProvider | undefined {
   if (!name) return undefined;
   const key = name.toLowerCase();
-  if (providerCache[key]) return providerCache[key];
 
   const apiKeys = (settings?.getSettings()?.apiKeys || {}) as any;
+  const shipsKey = apiKeys.shipsGo?.apiKey;
+  const shipsEnv = process.env.SHIPSGO_API_KEY || '';
+  const effectiveShipsKey = (shipsKey && shipsKey !== 'USE_ENV_OR_INSERT_TOKEN' ? shipsKey : shipsEnv) || '';
+
+  if (key === 'shipsgo' && shipsKey === 'USE_ENV_OR_INSERT_TOKEN' && shipsEnv && providerCache[key]) {
+    delete providerCache[key];
+  }
+  if (providerCache[key]) return providerCache[key];
 
   let provider: TrackingProvider | undefined;
   switch (key) {
     case 'shipsgo':
-      provider = new ShipsGoProvider(apiKeys.shipsGo?.apiKey || process.env.SHIPSGO_API_KEY || '');
+      provider = new ShipsGoProvider(effectiveShipsKey);
       break;
     case 'vizion':
       provider = new VizionProvider(apiKeys.vizion?.apiKey || process.env.VIZION_API_KEY || '');

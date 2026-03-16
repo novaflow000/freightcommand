@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { app, trackingEngine } from '../app.ts';
 import axios from 'axios';
 import { providerRegistry } from '../app.ts';

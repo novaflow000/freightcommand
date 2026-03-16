@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import crypto from 'crypto';
 import { ProviderExecutor, DataMappingEngine } from './provider_executor.ts';
+import { buildShipsGoCreatePayload } from './carriers/carrier_mapping.ts';
 import { ProviderRegistry } from './provider_registry.ts';
 import { ProviderRouter } from './provider_router.ts';
 import { canonicalDataService, CanonicalShipmentRecord } from './canonical_data_service.ts';
@@ -185,6 +186,9 @@ export class RefreshService {
         merged.events = dedupEvents([...(merged.events || []), ...incoming.events]);
       }
     }
+    if (!merged.events?.length && incoming.containers?.[0]?.events?.length) {
+      merged.events = incoming.containers[0].events;
+    }
 
     if (incoming.route_geometry && ctx.sourceEndpoint === 'get_route') {
       merged.route_geometry = incoming.route_geometry;
@@ -253,29 +257,61 @@ export class RefreshService {
     if (!providerOrder.length) throw new Error('No provider available');
     const provider = providerOrder[0];
 
-    let trackingId = shipment.external_tracking_id || shipment.container_number || shipment.bl_number;
-    if (!trackingId && allowCreate) {
-      const created = await this.callWithRetry(() =>
-        this.executor.executeProviderRequest(provider.id, 'create_tracking', {
-          container_number: shipment.container_number,
+    const existingCanonical = canonicalDataService.getById(job.shipment_id);
+    const prevShipmentId = existingCanonical?.shipment?.shipment_id as string;
+    const looksLikeShipsGoId = (id: string) => id && /^\d+$/.test(String(id));
+    let rawId = shipment.external_tracking_id || (looksLikeShipsGoId(prevShipmentId) ? prevShipmentId : undefined) || shipment.container_number || shipment.bl_number;
+    const validForShipsGo = rawId && !String(rawId).startsWith('sim-') && (provider.name !== 'ShipsGo' || looksLikeShipsGoId(rawId));
+    let trackingId = validForShipsGo ? rawId : undefined;
+
+    // 1) POST create_tracking first → get shipment id (required before get_shipment/get_route)
+    // Always attempt create when no valid id – even for "Refresh" (api mode)
+    if (!trackingId) {
+      try {
+        const payload = buildShipsGoCreatePayload({
           bl_number: shipment.bl_number,
-          booking_number: shipment.booking_number,
+          container_number: shipment.container_number,
+          booking_number: (shipment as any).booking_number,
           carrier: shipment.carrier_code || shipment.carrier,
-        }, { shipment_id: shipment.bl_number, bl_number: shipment.bl_number })
-      );
-      const providedId = (created as any)?.shipment?.id || (created as any)?.id || (created as any)?.shipment_id;
-      if (providedId) {
-        trackingId = String(providedId);
-        this.dataManager.update_shipment(shipment.bl_number, {
-          external_tracking_id: trackingId,
-          tracking_provider: provider.name,
-          last_tracking_update: new Date().toISOString(),
         });
+        const created = await this.callWithRetry(() =>
+          this.executor.executeProviderRequest(provider.id, 'create_tracking', payload, {
+            shipment_id: shipment.bl_number,
+            bl_number: shipment.bl_number,
+          })
+        );
+        const providedId = (created as any)?.shipment?.id || (created as any)?.id || (created as any)?.shipment_id;
+        if (providedId) {
+          trackingId = String(providedId);
+          this.dataManager.update_shipment(shipment.bl_number || job.shipment_id, {
+            external_tracking_id: trackingId,
+            tracking_provider: provider.name,
+            last_tracking_update: new Date().toISOString(),
+          });
+        }
+      } catch (createErr: any) {
+        const status = createErr?.response?.status;
+        const body = createErr?.response?.data;
+        if (status === 402 || body?.message === 'NOT_ENOUGH_CREDITS') {
+          throw new Error('ShipsGo: No API credits. Add credits at shipsgo.com to enable tracking.');
+        }
+        const existingId = body?.shipment?.id || body?.id;
+        if (existingId) {
+          trackingId = String(existingId);
+          this.dataManager.update_shipment(shipment.bl_number || job.shipment_id, {
+            external_tracking_id: trackingId,
+            tracking_provider: provider.name,
+            last_tracking_update: new Date().toISOString(),
+          });
+        } else {
+          throw createErr;
+        }
       }
     }
 
-    if (!trackingId) throw new Error('Missing tracking id');
+    if (!trackingId) throw new Error('Missing tracking id. Use Full re-sync to create tracking first, or ensure ShipsGo has API credits.');
 
+    // 2) GET get_shipment (using id from step 1)
     const ensureThrottle = async () => {
       while (!this.throttle(provider.id)) {
         await this.sleep(200);
@@ -284,23 +320,76 @@ export class RefreshService {
 
     let working = canonicalDataService.getById(job.shipment_id);
 
-    // get_shipment
+    // get_shipment - ShipsGo returns { shipment: {...} } but executor extracts inner object; wrap for mappings that expect shipment.xxx
     await ensureThrottle();
-    const shipmentPayload = await this.callWithRetry(() =>
-      this.executor.executeProviderRequest(provider.id, 'get_shipment', { shipment_id: trackingId }, { shipment_id: job.shipment_id, bl_number: shipment.bl_number })
-    );
-    const canonicalShipment = this.mapping.normalizeProviderResponse(provider.id, shipmentPayload, 'get_shipment');
+    let shipmentPayload: any;
+    try {
+      shipmentPayload = await this.callWithRetry(() =>
+        this.executor.executeProviderRequest(provider.id, 'get_shipment', { shipment_id: trackingId }, { shipment_id: job.shipment_id, bl_number: shipment.bl_number })
+      );
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        throw new Error(`Shipment ${trackingId} not found on ShipsGo. Use Full re-sync to create it first (requires API credits).`);
+      }
+      throw err;
+    }
+
+    const wrappedForMapping = shipmentPayload && typeof shipmentPayload === 'object' ? { shipment: shipmentPayload } : shipmentPayload;
+    let canonicalShipment = this.mapping.normalizeProviderResponse(provider.id, wrappedForMapping, 'get_shipment');
+
+    if (provider.name === 'ShipsGo' && shipmentPayload) {
+      const s = shipmentPayload as any;
+      if (s.status && !canonicalShipment.shipment?.shipment_status) {
+        canonicalShipment.shipment = { ...(canonicalShipment.shipment || {}), shipment_status: s.status };
+      } else if (s.status) {
+        canonicalShipment.shipment!.shipment_status = s.status;
+      }
+      if (s.reference && !canonicalShipment.shipment?.reference) {
+        canonicalShipment.shipment = { ...(canonicalShipment.shipment || {}), reference: s.reference };
+      }
+      const movements = s?.containers?.[0]?.movements || [];
+      if (movements.length && (!canonicalShipment.events?.length || !canonicalShipment.events[0]?.event_type)) {
+        const evts = movements.map((m: any) => ({
+          event_type: m.event || 'EVENT',
+          event_status: m.status || 'UNKNOWN',
+          event_timestamp: m.timestamp,
+          event_location_name: m.location?.name,
+          event_location_code: m.location?.code,
+          vessel_name: m.vessel?.name,
+          voyage: m.voyage,
+        }));
+        canonicalShipment.events = evts;
+        if (canonicalShipment.containers?.[0]) {
+          canonicalShipment.containers[0].events = evts;
+        }
+      }
+    }
+
     working = this.mergeCanonical(working, { ...canonicalShipment, id: job.shipment_id, bl_number: shipment.bl_number } as any, {
       sourceEndpoint: 'get_shipment',
       mode: job.mode,
     });
 
-    // get_route
+    // 3) GET get_route (using same id from step 1)
     await ensureThrottle();
     const routePayload = await this.callWithRetry(() =>
       this.executor.executeProviderRequest(provider.id, 'get_route', { shipment_id: trackingId }, { shipment_id: job.shipment_id, bl_number: shipment.bl_number })
     );
     const canonicalRoute = this.mapping.normalizeProviderResponse(provider.id, routePayload, 'get_route');
+    // Build route_geometry from GeoJSON features if mapping didn't produce it
+    if (Array.isArray(routePayload) && !canonicalRoute.route_geometry?.route_coordinates) {
+      const coords: number[][] = [];
+      routePayload.forEach((f: any) => {
+        if (f?.geometry?.type === 'LineString' && Array.isArray(f.geometry.coordinates)) {
+          f.geometry.coordinates.forEach((c: number[]) => coords.push(c));
+        } else if (f?.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates) && f.geometry.coordinates.length >= 2) {
+          coords.push(f.geometry.coordinates);
+        }
+      });
+      if (coords.length > 0) {
+        (canonicalRoute as any).route_geometry = { route_coordinates: coords, route_geometry_type: 'LineString' };
+      }
+    }
     working = this.mergeCanonical(working, { ...canonicalRoute, id: job.shipment_id, bl_number: shipment.bl_number } as any, {
       sourceEndpoint: 'get_route',
       mode: job.mode,

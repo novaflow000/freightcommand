@@ -23,7 +23,7 @@ import { MaerskConnector } from './modules/api_connectors/maersk.ts';
 import { CmaCgmConnector } from './modules/api_connectors/cma_cgm.ts';
 
 // Import tracking providers
-import { normalizeCarrier } from './modules/carriers/carrier_mapping.ts';
+import { normalizeCarrier, normalizeInjectedInput } from './modules/carriers/carrier_mapping.ts';
 
 export const app = express();
 app.use(cors());
@@ -201,6 +201,18 @@ app.get('/api/v1/admin/providers', (_req: Request, res: Response) => {
       auth_header,
       is_active: p.is_active,
       priority: p.priority,
+      api_key: p.api_key,
+      client_id: p.client_id,
+      client_secret: p.client_secret,
+      headers: p.headers,
+      timeout_ms: p.timeout_ms,
+      retry_attempts: p.retry_attempts,
+      retry_delay_ms: p.retry_delay_ms,
+      rate_limit_per_minute: p.rate_limit_per_minute,
+      cost_per_request: p.cost_per_request,
+      multi_carrier: p.multi_carrier,
+      supports_container_tracking: p.supports_container_tracking,
+      supports_bl_tracking: p.supports_bl_tracking,
       endpoints: eps,
       carrier_codes,
     };
@@ -721,8 +733,11 @@ app.post('/api/v1/shipments/injected', (req: Request, res: Response) => {
   try {
     const carrier_name = (req.body as any).carrier;
     const carrier_code = normalizeCarrier(carrier_name);
+    const body = req.body as any;
+    const normalized = normalizeInjectedInput(body);
     const created = dataManager.upsert_shipment({
-      ...req.body,
+      ...body,
+      ...normalized,
       carrier: carrier_name,
       carrier_name,
       carrier_code,
@@ -731,17 +746,16 @@ app.post('/api/v1/shipments/injected', (req: Request, res: Response) => {
       id: created.bl_number || created.booking_number || created.container_number,
       bl_number: created.bl_number,
       container_number: created.container_number,
-      booking_number: (req.body as any).booking_number,
+      booking_number: created.booking_number,
       carrier: created.carrier,
       client: created.client,
       origin: created.origin_port,
       destination: created.destination_port,
     });
-    // enqueue background tracking job
     trackingQueue.enqueue({
       bl_number: created.bl_number,
       container_number: created.container_number,
-      booking_number: (req.body as any).booking_number,
+      booking_number: created.booking_number,
       carrier: carrier_code,
       carrier_name,
     });
@@ -780,7 +794,19 @@ app.post('/api/v1/shipments/injected/upload', upload.single('file'), (req: Reque
       try {
         const carrier_name = row.carrier;
         const carrier_code = normalizeCarrier(carrier_name);
-        const created = dataManager.upsert_shipment({...row, carrier: carrier_name, carrier_name, carrier_code, status: 'Tracking Requested'} as any);
+        const norm = normalizeInjectedInput({
+          bl_number: row.bl_number,
+          booking_number: row.booking_number,
+          container_number: row.container_number,
+        });
+        const created = dataManager.upsert_shipment({
+          ...row,
+          ...norm,
+          carrier: carrier_name,
+          carrier_name,
+          carrier_code,
+          status: 'Tracking Requested',
+        } as any);
         canonicalDataService.upsertInjected({
           id: created.bl_number || created.booking_number || created.container_number,
           bl_number: created.bl_number,
@@ -822,10 +848,14 @@ app.post('/api/v1/shipments/injected/bulk-json', (req: Request, res: Response) =
     try {
       const carrier_name = row.carrier;
       const carrier_code = normalizeCarrier(carrier_name);
-      const created = dataManager.upsert_shipment({
+      const norm = normalizeInjectedInput({
         bl_number: row.bl_number,
         booking_number: row.booking_number,
         container_number: row.container_number,
+      });
+      const created = dataManager.upsert_shipment({
+        ...row,
+        ...norm,
         carrier: carrier_name,
         carrier_name,
         carrier_code,

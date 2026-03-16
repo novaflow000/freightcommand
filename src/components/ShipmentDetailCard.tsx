@@ -33,14 +33,14 @@ export default function ShipmentDetailCard({ shipment }: Props) {
   const container = shipment.containers?.[0] || {};
   const vessel = shipment.vessels?.[0] || {};
   const progress = route.transit_progress_percent ?? 0;
-  const events = shipment.events || [];
+  const events = shipment.events?.length ? shipment.events : (shipment.containers?.[0]?.events || []);
   const meta = shipment.metadata || {};
 
   return (
     <div className="space-y-5">
       <header className="flex items-start justify-between">
         <div>
-          <div className="text-lg font-bold text-gray-900">{shipment.bl_number || sh.booking_number || sh.shipment_id}</div>
+          <div className="text-lg font-bold text-gray-900">{shipment.bl_number || sh.reference || sh.booking_number || sh.shipment_id}</div>
           <div className="text-sm text-gray-500">{shipment.carrier?.carrier_name || '—'} • {shipment.carrier?.carrier_code || '—'}</div>
           <div className="flex items-center gap-2 mt-2">
             <span className={cn('px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border', statusBadge(sh.shipment_status || sh.status || sh.shipment_status || ''))}>

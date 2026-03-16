@@ -328,22 +328,32 @@ export class ProviderExecutor {
     if (!endpoint) throw new Error('Endpoint not found');
 
     this.disallowHeaderKeys(endpoint.body_template);
+    // Prefer provider api_key from admin panel; fall back to env for ShipsGo
+    const effectiveApiKey =
+      (provider.api_key && String(provider.api_key).trim())
+        ? provider.api_key
+        : (provider.name === 'ShipsGo' && process.env.SHIPSGO_API_KEY)
+          ? process.env.SHIPSGO_API_KEY
+          : provider.api_key;
     const vars = {
       ...data,
-      API_KEY: provider.api_key,
+      API_KEY: effectiveApiKey,
       CLIENT_ID: provider.client_id,
       CLIENT_SECRET: provider.client_secret,
-      api_key: provider.api_key,
+      api_key: effectiveApiKey,
       client_id: provider.client_id,
       client_secret: provider.client_secret,
     };
-    const headersTpl = endpoint.headers_json ?? {};
+    const headersTpl = endpoint.headers_json ?? provider.headers ?? {};
     const queryTpl = endpoint.query_params_json ?? {};
     const bodyTpl = endpoint.body_template ?? {};
 
     const headers = this.buildHeaders(provider, headersTpl, vars);
     const query = interpolate(queryTpl, vars);
-    const body = interpolate(bodyTpl, vars);
+    let body = interpolate(bodyTpl, vars);
+    if (body && typeof body === 'object' && endpoint_name === 'create_tracking' && provider.name === 'ShipsGo') {
+      body = Object.fromEntries(Object.entries(body).filter(([, v]) => v !== '' && v !== undefined && v !== null));
+    }
 
     const url = this.resolvePath(provider.base_url, endpoint.path, vars);
     const timeout = endpoint.timeout_ms || provider.timeout_ms || 15000;
@@ -362,7 +372,11 @@ export class ProviderExecutor {
     const start = Date.now();
     try {
       const res = await this.executeWithRetry(config, retries, retryDelay);
-      const payload = endpoint.response_root ? res.data?.[endpoint.response_root] : res.data;
+      let payload = res.data;
+      if (endpoint.response_root) {
+        const path = endpoint.response_root.split('.');
+        payload = path.reduce((obj: any, key) => obj?.[key], res.data);
+      }
       const latency = Date.now() - start;
       // Persist log for refresh / reapply
       this.registry.pushApiLog({

@@ -105,7 +105,7 @@ export class CanonicalDataService {
   }
 
   public upsertFromFused(fused: FusedShipmentData) {
-    const id = fused.tracking?.tracking_id || fused.bl_number;
+    const id = fused.bl_number || fused.tracking?.tracking_id;
     const shipment_status = fused.tracking?.status || fused.tracking?.provider || 'Unknown';
     const eta = fused.tracking?.eta;
     const container_number = fused.tracking?.container_number;
@@ -192,10 +192,24 @@ export class CanonicalDataService {
     this.upsertFromCanonical(canonical);
   }
 
+  private deduplicateByBl(records: CanonicalShipmentRecord[]): CanonicalShipmentRecord[] {
+    const byBl = new Map<string, CanonicalShipmentRecord>();
+    for (const s of records) {
+      const bl = s.bl_number || s.shipment?.booking_number || s.id;
+      if (!bl) continue;
+      const existing = byBl.get(bl);
+      const score = (r: CanonicalShipmentRecord) =>
+        ((r.events?.length || 0) * 10) + ((r.route?.origin_port_name ? 5 : 0) + (r.route?.destination_port_name ? 5 : 0)) + (r.id === bl ? 20 : 0);
+      if (!existing || score(s) > score(existing)) byBl.set(bl, s);
+    }
+    return Array.from(byBl.values());
+  }
+
   public listCanonical(filters?: Partial<{ provider: string; carrier: string; status: string; origin: string; destination: string; container: string; booking: string }>): CanonicalShipmentRecord[] {
     const all = Array.from(this.shipments.values());
-    if (!filters) return all;
-    return all.filter((s) => {
+    const deduped = this.deduplicateByBl(all);
+    if (!filters) return deduped;
+    return deduped.filter((s) => {
       const sh = s.shipment || {};
       const route = s.route || {};
       const container = s.containers?.[0] || {};

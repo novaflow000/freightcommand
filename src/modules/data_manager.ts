@@ -5,6 +5,7 @@ import { stringify } from 'csv-stringify/sync';
 
 export interface Shipment {
   bl_number: string;
+  booking_number?: string;
   client: string;
   container_number: string;
   carrier: string;
@@ -103,6 +104,7 @@ export class ShipmentDataManager {
         header: true,
         columns: [
           'bl_number',
+          'booking_number',
           'client',
           'container_number',
           'carrier',
@@ -137,9 +139,12 @@ export class ShipmentDataManager {
   public add_shipment(shipmentData: Omit<Shipment, 'created_at' | 'updated_at'>): Shipment {
     this.validate_required(shipmentData);
     this.prevent_duplicates(shipmentData);
+    // Use container/booking as bl_number when bl_number is empty so records are findable for tracking
+    const blNumber = shipmentData.bl_number || shipmentData.container_number || (shipmentData as any).booking_number || '';
 
     const newShipment: Shipment = {
       ...shipmentData,
+      bl_number: blNumber,
       carrier_name: shipmentData.carrier_name || shipmentData.carrier || '',
       carrier_code: shipmentData.carrier_code || '',
       created_at: new Date().toISOString(),
@@ -191,19 +196,29 @@ export class ShipmentDataManager {
   }
 
   public update_shipment(bl_number: string, updates: Partial<Omit<Shipment, 'bl_number' | 'created_at' | 'updated_at'>>): Shipment | undefined {
-    const index = this.shipments.findIndex((s) => s.bl_number === bl_number);
+    let index = this.shipments.findIndex((s) => s.bl_number === bl_number);
+    if (index === -1) {
+      index = this.shipments.findIndex((s) => s.container_number === bl_number || s.booking_number === bl_number);
+    }
     if (index === -1) {
       return undefined;
     }
 
-    this.shipments[index] = {
+    const u = updates as Record<string, unknown>;
+    const merged = {
       ...this.shipments[index],
       ...updates,
       carrier_name: updates.carrier_name || updates.carrier || this.shipments[index].carrier_name || this.shipments[index].carrier,
       carrier_code: updates.carrier_code || this.shipments[index].carrier_code,
       updated_at: new Date().toISOString(),
     };
-
+    if (u.bl_number && (merged.bl_number === '' || !merged.bl_number)) {
+      merged.bl_number = String(u.bl_number);
+    }
+    if (u.booking_number !== undefined) {
+      merged.booking_number = String(u.booking_number);
+    }
+    this.shipments[index] = merged;
     this._save_to_csv();
     return this.shipments[index];
   }
@@ -219,7 +234,12 @@ export class ShipmentDataManager {
   }
 
   public get_shipment_by_bl(bl_number: string): Shipment | undefined {
-    return this.shipments.find((s) => s.bl_number === bl_number);
+    if (!bl_number) return undefined;
+    return (
+      this.shipments.find((s) => s.bl_number === bl_number) ||
+      this.shipments.find((s) => s.container_number === bl_number) ||
+      this.shipments.find((s) => s.booking_number === bl_number)
+    );
   }
 
   public find_by_identifiers(container?: string, booking?: string, bl?: string): Shipment | undefined {
@@ -242,6 +262,7 @@ export class ShipmentDataManager {
   public export_template(): string {
     const headers = [
       'bl_number',
+      'booking_number',
       'client',
       'container_number',
       'carrier',

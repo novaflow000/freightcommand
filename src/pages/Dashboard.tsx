@@ -19,7 +19,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (): Promise<any[]> => {
     setLoading(true);
     try {
       const [ship, analytics] = await Promise.all([
@@ -27,14 +27,12 @@ export default function Dashboard() {
         fetchCanonicalAnalytics(),
       ]);
       setCanonicalShipments(ship);
-      // Derive stats client-side to stay in lock-step with the list data
       const derived = deriveStats(ship);
-      setStats({
-        ...analytics,
-        ...derived,
-      });
+      setStats({ ...analytics, ...derived });
+      return ship;
     } catch (err) {
       console.error(err);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -96,6 +94,15 @@ export default function Dashboard() {
   const onSelectShipment = (s: any) => {
     const found = canonicalShipments.find((c) => c.bl_number === s.bl_number || c.shipment?.shipment_id === s.canonical_id);
     setSelectedShipment(found || s);
+  };
+
+  const onDetailRefreshSuccess = async () => {
+    const ship = await loadData();
+    const bl = selectedShipment?.bl_number || selectedShipment?.shipment?.shipment_id;
+    if (bl && ship?.length) {
+      const updated = ship.find((c: any) => c.bl_number === bl || c.shipment?.shipment_id === bl);
+      if (updated) setSelectedShipment(updated);
+    }
   };
 
   const handleRefresh = async (ids: string[], mode: 'reapply' | 'api' | 'full') => {
@@ -178,7 +185,8 @@ export default function Dashboard() {
       {selectedShipment && (
         <DetailModal 
           shipment={selectedShipment} 
-          onClose={() => setSelectedShipment(null)} 
+          onClose={() => setSelectedShipment(null)}
+          onRefreshSuccess={onDetailRefreshSuccess}
         />
       )}
     </div>

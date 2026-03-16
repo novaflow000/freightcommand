@@ -65,6 +65,7 @@ describe('Dashboard ↔ Provider configuration integration', () => {
     });
 
     registry.upsertCoverage({ provider_id: provider.id, carrier_code: carrier });
+    registry.upsertCoverage({ provider_id: provider.id, carrier_code: 'CMDU' });
 
     registry.upsertEndpoint({
       provider_id: provider.id,
@@ -192,7 +193,7 @@ describe('Dashboard ↔ Provider configuration integration', () => {
       expect.arrayContaining(['create_tracking', 'get_shipment', 'get_route']),
     );
     expect(registry.listProviders().length).toBe(1);
-    expect(registry.listCoverage().length).toBe(1);
+    expect(registry.listCoverage().length).toBeGreaterThanOrEqual(1);
     diagLog.push('API configuration loaded');
 
     const injected = dataManager.upsert_shipment({
@@ -279,5 +280,39 @@ describe('Dashboard ↔ Provider configuration integration', () => {
         'Dashboard refreshed',
       ]),
     );
+  });
+
+  it('sends booking_number (not container_number) when CSA0418719 is used as booking ref', async () => {
+    clearCanonical();
+    const bookingRef = 'CSA0418719';
+    const injected = dataManager.upsert_shipment({
+      bl_number: bookingRef,
+      booking_number: bookingRef,
+      container_number: '',
+      carrier: 'CMA CGM',
+      origin: '',
+      destination: '',
+      client: 'Test',
+      cargo_type: '',
+      cargo_weight: '',
+      cargo_value: '',
+      customer_ref: '',
+      incoterm: '',
+      special_instructions: '',
+      status: 'Tracking Requested',
+    } as any);
+
+    await queue.processJob({
+      bl_number: injected.bl_number,
+      booking_number: injected.booking_number,
+      container_number: injected.container_number,
+      carrier: 'CMA CGM',
+    });
+
+    expect(requests).toHaveLength(3);
+    const createBody = requests[0].data;
+    expect(createBody.booking_number).toBe(bookingRef);
+    expect(createBody.container_number).toBeUndefined();
+    expect(createBody.carrier).toBe('CMDU');
   });
 });

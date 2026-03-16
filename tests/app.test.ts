@@ -75,6 +75,21 @@ describe('API Routes (handler-level, no network)', () => {
       expect(res.body.bl_number).toBe('NEW');
     });
 
+    it('should normalize CSA0418719 as booking_number when sent in container_number', async () => {
+      const created = { bl_number: 'CSA0418719', booking_number: 'CSA0418719', container_number: '', carrier: 'CMA CGM' };
+      const upsertSpy = vi.spyOn(dataManager, 'upsert_shipment').mockReturnValue(created as any);
+      vi.spyOn(dataManager, 'get_all_shipments').mockReturnValue([]);
+      const handler = findHandler('/api/v1/shipments/injected', 'post');
+      const res = await runHandler(handler, {
+        body: { container_number: 'CSA0418719', carrier: 'CMA CGM' },
+      });
+      expect(res.status).toBe(201);
+      const upsertArg = upsertSpy.mock.calls[0][0];
+      expect(upsertArg.booking_number).toBe('CSA0418719');
+      expect(upsertArg.container_number).toBe('');
+      expect(upsertArg.bl_number).toBe('CSA0418719');
+    });
+
     it('should return 400 on error', async () => {
       vi.spyOn(dataManager, 'upsert_shipment').mockImplementation(() => {
         throw new Error('Invalid data');

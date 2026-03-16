@@ -3,7 +3,7 @@ import { ProviderRegistry } from './provider_registry.ts';
 import { ProviderRouter } from './provider_router.ts';
 import { ShipmentDataManager } from './data_manager.ts';
 import { canonicalDataService } from './canonical_data_service.ts';
-import { normalizeCarrier } from './carriers/carrier_mapping.ts';
+import { normalizeCarrier, buildShipsGoCreatePayload } from './carriers/carrier_mapping.ts';
 
 interface Job {
   bl_number?: string;
@@ -55,20 +55,24 @@ export class TrackingQueue {
     const providerOrder = this.router.selectProvider({ container_number: job.container_number, bl_number: job.bl_number, carrier: carrierCode });
     if (!providerOrder.length) return;
     const provider = providerOrder[0];
-    // Prefer previously captured provider tracking id
-    let trackingId = job.provider_tracking_id || job.bl_number || job.container_number || job.booking_number;
+    // Step 1: create_tracking first to get shipment id – ShipsGo needs numeric id for get_shipment/get_route
+    const looksLikeShipsGoId = (id: string) => id && /^\d+$/.test(String(id));
+    let trackingId = job.provider_tracking_id && (provider.name !== 'ShipsGo' || looksLikeShipsGoId(job.provider_tracking_id))
+      ? job.provider_tracking_id
+      : undefined;
 
-    // create tracking if needed
+    // 1) POST create_tracking → get shipment id (required before get_shipment/get_route)
     try {
+      const payload = buildShipsGoCreatePayload({
+        bl_number: job.bl_number,
+        container_number: job.container_number,
+        booking_number: job.booking_number,
+        carrier: job.carrier || job.carrier_name,
+      });
       const created = await this.executor.executeProviderRequest(
         provider.id,
         'create_tracking',
-        {
-          container_number: job.container_number,
-          bl_number: job.bl_number,
-          booking_number: job.booking_number,
-          carrier: carrierCode,
-        },
+        payload,
         { shipment_id: job.bl_number, bl_number: job.bl_number },
       );
       const returnedId = (created as any)?.shipment_id || (created as any)?.id || (created as any)?.tracking_id;
@@ -90,7 +94,12 @@ export class TrackingQueue {
       }
     }
 
-    // fetch shipment + route
+    if (!trackingId) {
+      console.warn('No valid ShipsGo tracking id after create_tracking – skip fetch (check API credits)');
+      return;
+    }
+
+    // 2) GET get_shipment (using id from step 1)
     let shipmentPayload: any = null;
     try {
       shipmentPayload = await this.executor.executeProviderRequest(
@@ -102,6 +111,7 @@ export class TrackingQueue {
     } catch (err) {
       console.warn('get_shipment failed', err?.toString?.());
     }
+    // 3) GET get_route (using same id from step 1)
     let routePayload: any = null;
     try {
       routePayload = await this.executor.executeProviderRequest(

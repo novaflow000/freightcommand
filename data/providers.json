@@ -28,6 +28,7 @@
       "path": "/v2/ocean/shipments",
       "body_template": {
         "reference": "{{reference}}",
+        "bl_number": "{{bl_number}}",
         "container_number": "{{container_number}}",
         "booking_number": "{{booking_number}}",
         "carrier": "{{carrier}}",
@@ -57,7 +58,7 @@
       "path": "/v2/ocean/shipments/{{shipment_id}}/geojson",
       "body_template": {},
       "path_params": [],
-      "response_root": "features",
+      "response_root": "geojson.features",
       "created_at": "2026-03-05T15:45:47.050Z"
     }
   ],
@@ -78,6 +79,16 @@
       "endpoint_id": "ep_1772725385157",
       "external_field": "shipment.id",
       "internal_field": "shipment_id",
+      "domain_entity": "Shipment",
+      "is_array": false,
+      "created_at": "2026-03-06T00:13:45.079Z"
+    },
+    {
+      "id": "map_1772756025079",
+      "provider_id": "prov_1772720875164",
+      "endpoint_id": "ep_1772725385157",
+      "external_field": "shipment.reference",
+      "internal_field": "reference",
       "domain_entity": "Shipment",
       "is_array": false,
       "created_at": "2026-03-06T00:13:45.079Z"
