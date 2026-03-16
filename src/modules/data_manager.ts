@@ -48,74 +48,36 @@ export class ShipmentDataManager {
     }
   }
 
+  /** Ensure we have enough demo shipments for map/KPIs. Call after load if count is low. */
+  public ensureDemoShipments(): void {
+    if (this.shipments.length >= 18) return;
+    this.shipments = [];
+    this.createSampleData();
+  }
+
   private createSampleData() {
+    const base = new Date().toISOString();
     const sampleData: Shipment[] = [
-      {
-        bl_number: 'HLCU123456789',
-        client: 'Acme Corp',
-        container_number: 'HLBU1234567',
-        carrier: 'Hapag-Lloyd',
-        origin: 'Hamburg',
-        destination: 'New York',
-        origin_port: 'Hamburg',
-        destination_port: 'New York',
-        cargo_type: 'Electronics',
-        cargo_weight: '15000',
-        weight: '15000',
-        cargo_value: '50000',
-        customer_ref: 'REF001',
-        incoterm: 'FOB',
-        special_instructions: 'Handle with care',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status: 'In Transit',
-        eta: '2023-11-15',
-        tracking_provider: 'ShipsGo',
-      },
-      {
-        bl_number: 'MAEU987654321',
-        client: 'Global Trade Ltd',
-        container_number: 'MSKU9876543',
-        carrier: 'Maersk',
-        origin: 'Shanghai',
-        destination: 'Rotterdam',
-        origin_port: 'Shanghai',
-        destination_port: 'Rotterdam',
-        cargo_type: 'Textiles',
-        cargo_weight: '12000',
-        weight: '12000',
-        cargo_value: '30000',
-        customer_ref: 'REF002',
-        incoterm: 'CIF',
-        special_instructions: '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status: 'Arrived',
-        eta: '2023-10-20',
-        tracking_provider: 'ShipsGo',
-      },
-      {
-        bl_number: 'CMAC456789012',
-        client: 'Pacific Imports',
-        container_number: 'CMAU4567890',
-        carrier: 'CMA CGM',
-        origin: 'Singapore',
-        destination: 'Los Angeles',
-        origin_port: 'Singapore',
-        destination_port: 'Los Angeles',
-        cargo_type: 'Machinery',
-        cargo_weight: '20000',
-        weight: '20000',
-        cargo_value: '100000',
-        customer_ref: 'REF003',
-        incoterm: 'DDP',
-        special_instructions: 'Keep dry',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status: 'In Transit',
-        eta: '2023-12-01',
-        tracking_provider: 'ShipsGo',
-      },
+      { bl_number: 'HLCU123456789', client: 'Acme Corp', container_number: 'HLBU1234567', carrier: 'Hapag-Lloyd', origin: 'Casablanca', destination: 'New York', origin_port: 'Casablanca', destination_port: 'New York', cargo_type: 'Electronics', cargo_weight: '15000', weight: '15000', cargo_value: '50000', customer_ref: 'REF001', incoterm: 'FOB', special_instructions: '', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-15', tracking_provider: 'ShipsGo' },
+      { bl_number: 'MAEU987654321', client: 'Global Trade Ltd', container_number: 'MSKU9876543', carrier: 'Maersk', origin: 'Tanger Med', destination: 'Rotterdam', origin_port: 'Tanger Med', destination_port: 'Rotterdam', cargo_type: 'Textiles', cargo_weight: '12000', weight: '12000', cargo_value: '30000', customer_ref: 'REF002', incoterm: 'CIF', special_instructions: '', created_at: base, updated_at: base, status: 'Delivered', eta: '2024-11-20', tracking_provider: 'ShipsGo' },
+      { bl_number: 'CMAC456789012', client: 'Pacific Imports', container_number: 'CMAU4567890', carrier: 'CMA CGM', origin: 'Casablanca', destination: 'Shanghai', origin_port: 'Casablanca', destination_port: 'Shanghai', cargo_type: 'Machinery', cargo_weight: '20000', weight: '20000', cargo_value: '100000', customer_ref: 'REF003', incoterm: 'DDP', special_instructions: 'Keep dry', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-25', tracking_provider: 'ShipsGo' },
+      { bl_number: 'HLAG111222333', client: 'EuroFreight', container_number: 'HLBG1112223', carrier: 'Hapag-Lloyd', origin: 'Jorf Lasfar', destination: 'Antwerp', origin_port: 'Jorf Lasfar', destination_port: 'Antwerp', cargo_type: 'Chemicals', cargo_weight: '18000', weight: '18000', cargo_value: '75000', customer_ref: 'REF004', incoterm: 'CIF', special_instructions: '', created_at: base, updated_at: base, status: 'Delayed', eta: '2024-12-20', tracking_provider: 'ShipsGo' },
+      { bl_number: 'MSCU444555666', client: 'Mediterranean Co', container_number: 'MSCA4445556', carrier: 'MSC', origin: 'Mohammedia', destination: 'Dubai', origin_port: 'Mohammedia', destination_port: 'Dubai', cargo_type: 'Consumer Goods', cargo_weight: '14000', weight: '14000', cargo_value: '45000', customer_ref: 'REF005', incoterm: 'FOB', special_instructions: '', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-18', tracking_provider: 'ShipsGo' },
+      { bl_number: 'OOLU777888999', client: 'Asia Pacific Ltd', container_number: 'OOLB7778889', carrier: 'OOCL', origin: 'Tanger Med', destination: 'Savannah', origin_port: 'Tanger Med', destination_port: 'Savannah', cargo_type: 'Auto Parts', cargo_weight: '16000', weight: '16000', cargo_value: '62000', customer_ref: 'REF006', incoterm: 'DDP', special_instructions: '', created_at: base, updated_at: base, status: 'Pending', eta: '2025-01-05', tracking_provider: 'ShipsGo' },
+      { bl_number: 'EGLV000111222', client: 'China Export Co', container_number: 'EGLB0001112', carrier: 'Evergreen', origin: 'Casablanca', destination: 'Santos', origin_port: 'Casablanca', destination_port: 'Santos', cargo_type: 'Phosphates', cargo_weight: '22000', weight: '22000', cargo_value: '85000', customer_ref: 'REF007', incoterm: 'CIF', special_instructions: '', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-28', tracking_provider: 'ShipsGo' },
+      { bl_number: 'COSU333444555', client: 'South America Inc', container_number: 'COSA3334445', carrier: 'COSCO', origin: 'Jorf Lasfar', destination: 'Los Angeles', origin_port: 'Jorf Lasfar', destination_port: 'Los Angeles', cargo_type: 'Coffee', cargo_weight: '11000', weight: '11000', cargo_value: '38000', customer_ref: 'REF008', incoterm: 'FOB', special_instructions: 'Temperature control', created_at: base, updated_at: base, status: 'Delivered', eta: '2024-11-30', tracking_provider: 'ShipsGo' },
+      { bl_number: 'HLCU201001011', client: 'Atlantic Trading', container_number: 'HLBU2010011', carrier: 'Hapag-Lloyd', origin: 'Casablanca', destination: 'Singapore', origin_port: 'Casablanca', destination_port: 'Singapore', cargo_type: 'Textiles', cargo_weight: '13000', weight: '13000', cargo_value: '42000', customer_ref: 'REF009', incoterm: 'CIF', special_instructions: '', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-22', tracking_provider: 'ShipsGo' },
+      { bl_number: 'MAEU201002022', client: 'North Euro', container_number: 'MSKU2010022', carrier: 'Maersk', origin: 'Tanger Med', destination: 'Houston', origin_port: 'Tanger Med', destination_port: 'Houston', cargo_type: 'Petrochemicals', cargo_weight: '19000', weight: '19000', cargo_value: '92000', customer_ref: 'REF010', incoterm: 'FOB', special_instructions: '', created_at: base, updated_at: base, status: 'Delayed', eta: '2024-12-25', tracking_provider: 'ShipsGo' },
+      { bl_number: 'CMAC201003033', client: 'Med Shipping', container_number: 'CMAU2010033', carrier: 'CMA CGM', origin: 'Mohammedia', destination: 'Antwerp', origin_port: 'Mohammedia', destination_port: 'Antwerp', cargo_type: 'Fertilizers', cargo_weight: '24000', weight: '24000', cargo_value: '58000', customer_ref: 'REF011', incoterm: 'FOB', special_instructions: '', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-18', tracking_provider: 'ShipsGo' },
+      { bl_number: 'MSCU201004044', client: 'Gulf Imports', container_number: 'MSCA2010044', carrier: 'MSC', origin: 'Jorf Lasfar', destination: 'Dubai', origin_port: 'Jorf Lasfar', destination_port: 'Dubai', cargo_type: 'Phosphates', cargo_weight: '26000', weight: '26000', cargo_value: '78000', customer_ref: 'REF012', incoterm: 'CIF', special_instructions: '', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-20', tracking_provider: 'ShipsGo' },
+      { bl_number: 'HLAG201005055', client: 'EuroPhos', container_number: 'HLBG2010055', carrier: 'Hapag-Lloyd', origin: 'Casablanca', destination: 'Rotterdam', origin_port: 'Casablanca', destination_port: 'Rotterdam', cargo_type: 'Phosphates', cargo_weight: '22000', weight: '22000', cargo_value: '66000', customer_ref: 'REF013', incoterm: 'FOB', special_instructions: '', created_at: base, updated_at: base, status: 'Delivered', eta: '2024-11-28', tracking_provider: 'ShipsGo' },
+      { bl_number: 'OOLU201006066', client: 'Auto Global', container_number: 'OOLB2010066', carrier: 'OOCL', origin: 'Tanger Med', destination: 'Shanghai', origin_port: 'Tanger Med', destination_port: 'Shanghai', cargo_type: 'Auto Parts', cargo_weight: '15000', weight: '15000', cargo_value: '95000', customer_ref: 'REF014', incoterm: 'DDP', special_instructions: '', created_at: base, updated_at: base, status: 'Pending', eta: '2025-01-10', tracking_provider: 'ShipsGo' },
+      { bl_number: 'EGLV201007077', client: 'Brazil Connect', container_number: 'EGLB2010077', carrier: 'Evergreen', origin: 'Jorf Lasfar', destination: 'Santos', origin_port: 'Jorf Lasfar', destination_port: 'Santos', cargo_type: 'Phosphoric Acid', cargo_weight: '20000', weight: '20000', cargo_value: '72000', customer_ref: 'REF015', incoterm: 'CIF', special_instructions: 'Hazardous', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-30', tracking_provider: 'ShipsGo' },
+      { bl_number: 'COSU201008088', client: 'Asia Link', container_number: 'COSA2010088', carrier: 'COSCO', origin: 'Mohammedia', destination: 'Singapore', origin_port: 'Mohammedia', destination_port: 'Singapore', cargo_type: 'Consumer Goods', cargo_weight: '14000', weight: '14000', cargo_value: '54000', customer_ref: 'REF016', incoterm: 'CIF', special_instructions: '', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-26', tracking_provider: 'ShipsGo' },
+      { bl_number: 'MAEU201009099', client: 'TexTrade', container_number: 'MSKU2010099', carrier: 'Maersk', origin: 'Casablanca', destination: 'Houston', origin_port: 'Casablanca', destination_port: 'Houston', cargo_type: 'Chemicals', cargo_weight: '17000', weight: '17000', cargo_value: '81000', customer_ref: 'REF017', incoterm: 'FOB', special_instructions: '', created_at: base, updated_at: base, status: 'Delayed', eta: '2024-12-28', tracking_provider: 'ShipsGo' },
+      { bl_number: 'MSCU201010100', client: 'Nordic Freight', container_number: 'MSCA2010100', carrier: 'MSC', origin: 'Tanger Med', destination: 'Antwerp', origin_port: 'Tanger Med', destination_port: 'Antwerp', cargo_type: 'Furniture', cargo_weight: '11000', weight: '11000', cargo_value: '39000', customer_ref: 'REF018', incoterm: 'CIF', special_instructions: '', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-15', tracking_provider: 'ShipsGo' },
+      { bl_number: 'CMAC201011111', client: 'Pacific Routes', container_number: 'CMAU2010111', carrier: 'CMA CGM', origin: 'Jorf Lasfar', destination: 'Los Angeles', origin_port: 'Jorf Lasfar', destination_port: 'Los Angeles', cargo_type: 'Machinery', cargo_weight: '18000', weight: '18000', cargo_value: '88000', customer_ref: 'REF019', incoterm: 'DDP', special_instructions: '', created_at: base, updated_at: base, status: 'Delivered', eta: '2024-11-25', tracking_provider: 'ShipsGo' },
+      { bl_number: 'HLCU201012122', client: 'Atlantic Bridge', container_number: 'HLBU2010122', carrier: 'Hapag-Lloyd', origin: 'Mohammedia', destination: 'New York', origin_port: 'Mohammedia', destination_port: 'New York', cargo_type: 'Electronics', cargo_weight: '12000', weight: '12000', cargo_value: '47000', customer_ref: 'REF020', incoterm: 'FOB', special_instructions: '', created_at: base, updated_at: base, status: 'In Transit', eta: '2024-12-20', tracking_provider: 'ShipsGo' },
     ];
     this.shipments = sampleData;
     this._save_to_csv();

@@ -35,6 +35,7 @@ const upload = multer({dest: path.join(process.cwd(), 'tmp_uploads')});
 // Core services
 export const settingsManager = new SettingsManager();
 export const dataManager = new ShipmentDataManager();
+dataManager.ensureDemoShipments(); // ensure 8+ shipments for map & analytics demo
 export const trackingEngine = new TrackingEngine(1800, settingsManager, dataManager, canonicalDataService);
 export const userManager = new UserManager();
 export const providerRegistry = new ProviderRegistry();

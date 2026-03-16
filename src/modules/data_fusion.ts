@@ -256,15 +256,22 @@ export class DataFusionEngine {
       typeof trackingData.location.lng === 'number' &&
       !(trackingData.location.lat === 0 && trackingData.location.lng === 0);
 
-    if (hasValidLocation && !trackingData.simulated) {
+    if (hasValidLocation) {
       fusedData.tracking.location = trackingData.location;
+      if (trackingData.vessel_position) {
+        fusedData.tracking.vessel_position = trackingData.vessel_position;
+      } else if (trackingData.location) {
+        fusedData.tracking.vessel_position = { lat: trackingData.location.lat, lng: trackingData.location.lng, timestamp };
+      }
     } else if (fusedData.tracking.status === 'Arrived' && destPort) {
       fusedData.tracking.location = { lat: destPort[0], lng: destPort[1] };
+      fusedData.tracking.vessel_position = { lat: destPort[0], lng: destPort[1], timestamp };
     } else if (derivedLocation) {
       fusedData.tracking.location = derivedLocation;
+      fusedData.tracking.vessel_position = { lat: derivedLocation.lat, lng: derivedLocation.lng, timestamp };
     } else if (originPort) {
-      // fallback: origin port (still at quay)
       fusedData.tracking.location = { lat: originPort[0], lng: originPort[1] };
+      fusedData.tracking.vessel_position = { lat: originPort[0], lng: originPort[1], timestamp };
     }
 
     // Harmonize status for downstream analytics

@@ -1,60 +1,92 @@
 import React, { useMemo, useRef, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { cn } from '../lib/utils';
-import { PORT_COORDINATES } from '../modules/geo_utils';
+import { PORT_COORDINATES, deriveInTransitLocation } from '../modules/geo_utils';
 
 interface TacticalMapProps {
   shipments: any[];
 }
 
-// Vessel status icon
+// Status → color (animated pulsing markers)
+// 🟢 In Transit | 🔴 Delayed | ⚫ Pending | 🔵 Delivered
 const normalizeStatus = (status: string) => (status || '').toUpperCase().replace(/[\s-]+/g, '_');
 
-const createStatusIcon = (status: string) => {
+const getStatusColor = (status: string): string => {
   const norm = normalizeStatus(status);
-  let color = '#3b82f6'; // default indigo-500
-  if (norm === 'ARRIVED' || norm === 'DELIVERED') color = '#10b981';
-  else if (norm === 'IN_TRANSIT') color = '#6366f1';
-  else if (norm === 'DELAYED' || norm === 'EXCEPTION' || norm === 'HOLD') color = '#e11d48';
+  if (norm === 'ARRIVED' || norm === 'DELIVERED') return '#3b82f6'; // 🔵 Delivered
+  if (norm === 'IN_TRANSIT') return '#22c55e'; // 🟢 In Transit
+  if (norm === 'DELAYED' || norm === 'EXCEPTION' || norm === 'HOLD') return '#ef4444'; // 🔴 Delayed
+  return '#374151'; // ⚫ Pending
+};
 
-  const size = 16;
-  const half = size / 2;
+const createPulsingMarkerIcon = (status: string) => {
+  const color = getStatusColor(status);
+  const size = 20;
 
   return L.divIcon({
-    className: 'custom-div-icon',
-    html: `<div style="
-      width: 0;
-      height: 0;
-      border-left: ${half}px solid transparent;
-      border-right: ${half}px solid transparent;
-      border-bottom: ${size}px solid ${color};
-      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.25));
-      transform: translateY(-2px);
+    className: 'custom-div-icon shipment-marker-wrapper',
+    html: `<div class="shipment-marker-pulse" style="
+      width: ${size}px;
+      height: ${size}px;
+      border-radius: 50%;
+      background: ${color};
+      border: 3px solid rgba(255,255,255,0.9);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
     "></div>`,
     iconSize: [size, size],
-    iconAnchor: [half, size],
-    popupAnchor: [0, -size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
   });
 };
 
-// Small triangle for ports
-const portIcon = L.divIcon({
-  className: 'custom-div-icon',
-  html: `<div style="
-      width: 0;
-      height: 0;
-      border-left: 6px solid transparent;
-      border-right: 6px solid transparent;
-      border-bottom: 10px solid #4f46e5;
-      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
-      transform: translateY(-2px);
-    "></div>`,
-  iconSize: [12, 10],
-  iconAnchor: [6, 10],
-  popupAnchor: [0, -8],
-});
+/**
+ * Get vessel position ON THE OCEAN (along route, not at ports).
+ * Uses middle waypoints of route when available, or interpolated position between origin/destination.
+ */
+function getOceanPosition(shipment: any, routePoints: [number, number][]): [number, number] | undefined {
+  // Real GPS / AIS position - use if it's along the route (not at port)
+  const last =
+    shipment.last_location ||
+    shipment.vessel_position ||
+    (Array.isArray(shipment.route_geometry?.current_coordinates)
+      ? { lat: shipment.route_geometry.current_coordinates[0], lng: shipment.route_geometry.current_coordinates[1] }
+      : undefined);
+  if (last && typeof last.lat === 'number' && typeof last.lng === 'number' && routePoints.length >= 2) {
+    const lats = routePoints.map((p) => p[0]);
+    const lngs = routePoints.map((p) => p[1]);
+    const pad = 8;
+    const inOceanBox =
+      last.lat >= Math.min(...lats) - pad &&
+      last.lat <= Math.max(...lats) + pad &&
+      last.lng >= Math.min(...lngs) - pad &&
+      last.lng <= Math.max(...lngs) + pad;
+    // Only use if not exactly at first/last port (ocean position)
+    const atOrigin = routePoints.length && Math.abs(last.lat - routePoints[0][0]) < 0.5 && Math.abs(last.lng - routePoints[0][1]) < 0.5;
+    const atDest = routePoints.length && Math.abs(last.lat - routePoints[routePoints.length - 1][0]) < 0.5 && Math.abs(last.lng - routePoints[routePoints.length - 1][1]) < 0.5;
+    if (inOceanBox && !atOrigin && !atDest) return [last.lat, last.lng];
+  }
+
+  // No real position: place at ocean (middle of route, not at ports)
+  if (routePoints.length >= 3) {
+    // Use a middle waypoint (indices 1..len-2 are ocean)
+    const midIdx = Math.floor(routePoints.length / 2);
+    return routePoints[midIdx];
+  }
+  if (routePoints.length === 2) {
+    const derived = deriveInTransitLocation(
+      shipment.origin || shipment.origin_port,
+      shipment.destination || shipment.destination_port,
+      shipment.bl_number || shipment.canonical_id || 'x',
+    );
+    if (derived) return [derived.lat, derived.lng];
+  }
+  if (routePoints.length >= 1) {
+    return routePoints[0]; // fallback
+  }
+  return undefined;
+}
 
 const jitter = (lat: number, lng: number, seed: string) => {
   let h = 0;
@@ -64,6 +96,16 @@ const jitter = (lat: number, lng: number, seed: string) => {
   const dy = ((((h / 1000) | 0) % 1000) / 1000 - 0.5) * delta;
   return [lat + dy, lng + dx] as [number, number];
 };
+
+function formatTimestamp(ts: string | undefined): string {
+  if (!ts) return '—';
+  try {
+    const d = new Date(ts);
+    return isNaN(d.getTime()) ? ts : d.toLocaleString();
+  } catch {
+    return ts;
+  }
+}
 
 export default function TacticalMap({ shipments }: TacticalMapProps) {
   const mapRef = useRef<L.Map | null>(null);
@@ -95,109 +137,67 @@ export default function TacticalMap({ shipments }: TacticalMapProps) {
         if (d) routePoints.push(d as [number, number]);
       }
 
-      // Vessel position (use only real coordinates; if out-of-bounds vs route, snap to route midpoint)
-      const last =
-        shipment.last_location ||
-        shipment.vessel_position ||
-        (Array.isArray(shipment.route_geometry?.current_coordinates) ? { lat: shipment.route_geometry.current_coordinates[0], lng: shipment.route_geometry.current_coordinates[1] } : undefined) ||
-        shipment.location;
-      let vesselPos: [number, number] | undefined =
-        last && typeof last.lat === 'number' && typeof last.lng === 'number'
-          ? ([last.lat, last.lng] as [number, number])
+      // Vessel position (real-time fictive) — no route line, only marker
+      const vesselPos = getOceanPosition(shipment, routePoints);
+
+      // Shipment marker — animated pulsing, color-coded by status
+      const displayPos =
+        vesselPos && routePoints.length >= 2
+          ? shipments.filter((s) => s.bl_number !== shipment.bl_number).length > 0
+            ? jitter(vesselPos[0], vesselPos[1], shipment.bl_number || '')
+            : vesselPos
           : undefined;
 
-      if (vesselPos && routePoints.length >= 2) {
-        const lats = routePoints.map((p) => p[0]);
-        const lngs = routePoints.map((p) => p[1]);
-        const pad = 5; // degrees padding around route bbox
-        const inBox =
-          vesselPos[0] >= Math.min(...lats) - pad &&
-          vesselPos[0] <= Math.max(...lats) + pad &&
-          vesselPos[1] >= Math.min(...lngs) - pad &&
-          vesselPos[1] <= Math.max(...lngs) + pad;
-        if (!inBox) {
-          const midIdx = Math.floor(routePoints.length / 2);
-          vesselPos = routePoints[midIdx];
-        }
+      if (displayPos) {
+        coords.push(displayPos as [number, number]);
       } else if (routePoints.length >= 2) {
-        // Synthesize an at-sea position so the map always shows a vessel triangle
-        const midIdx = Math.floor(routePoints.length / 2);
-        const [lat, lng] = routePoints[midIdx];
-        vesselPos = jitter(lat, lng, shipment.bl_number || shipment.id || '');
+        coords.push(...routePoints); // for bounds when no vessel pos
       }
 
-      // Polyline for route
-      if (routePoints.length >= 2) {
-        coords.push(...routePoints);
-        const highlighted = shipments.length === 1;
-        elements.push(
-          <Polyline
-            key={`${shipment.bl_number}-route`}
-            positions={routePoints}
-            pathOptions={{
-              color: highlighted ? '#7c3aed' : '#4f46e5',
-              weight: highlighted ? 4 : 2.5,
-              dashArray: highlighted ? undefined : '8 6',
-              opacity: normalizeStatus(status) === 'DELAYED' ? 0.7 : 0.6,
-              lineCap: 'round',
-              lineJoin: 'round',
-            }}
-          >
-            <Popup>
-              <div className="text-xs text-gray-900 space-y-1">
-                <div className="font-semibold">{shipment.bl_number}</div>
-                <div className="text-gray-600">{shipment.carrier}</div>
-                <div className="text-gray-600">{shipment.origin} → {shipment.destination}</div>
-                <div className="text-gray-600">ETA: {shipment.eta || '—'}</div>
-                <div className="text-gray-600">Status: {status}</div>
-              </div>
-            </Popup>
-          </Polyline>
-        );
+      if (displayPos) {
+        const lastGpsTs =
+          shipment.vessel_position?.timestamp ||
+          shipment.last_gps_timestamp ||
+          shipment.shipment?.checked_at ||
+          shipment.shipment?.updated_at ||
+          (Array.isArray(shipment.events) && shipment.events.length
+            ? shipment.events.reduce((latest: string | null, e: any) => {
+                const t = e.event_timestamp || e.timestamp;
+                if (!t) return latest;
+                if (!latest) return t;
+                return new Date(t) > new Date(latest) ? t : latest;
+              }, null)
+            : null);
 
-        // Port markers along route
-        routePoints.forEach((pt, idx) => {
-          const portName = shipment.route?.[idx]?.port || (idx === 0 ? shipment.origin_port || shipment.origin : idx === routePoints.length - 1 ? shipment.destination_port || shipment.destination : 'Waypoint');
-          elements.push(
-            <Marker key={`${shipment.bl_number}-port-${idx}`} position={pt} icon={portIcon}>
-              <Popup>
-                <div className="text-xs text-gray-800">
-                  <div className="font-semibold">{portName}</div>
-                  <div className="text-gray-500">BL {shipment.bl_number}</div>
-                  <div className="text-gray-500">ETA {shipment.eta || '—'}</div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        });
-      }
-
-      // Vessel marker
-      if (vesselPos && vesselPos.length === 2) {
-        coords.push(vesselPos as [number, number]);
         elements.push(
-          <Marker key={`${shipment.bl_number}-vessel`} position={vesselPos as [number, number]} icon={createStatusIcon(status)}>
+          <Marker key={`${shipment.bl_number}-vessel`} position={displayPos as [number, number]} icon={createPulsingMarkerIcon(status)}>
             <Popup className="custom-popup">
-              <div className="p-3 bg-white text-gray-900 min-w-[220px]">
-                <div className="flex items-center justify-between mb-1">
+              <div className="p-3 bg-white text-gray-900 min-w-[240px]">
+                <div className="flex items-center justify-between mb-2">
                   <h3 className="font-bold text-sm font-mono text-indigo-600">{shipment.bl_number}</h3>
                   <span
                     className={cn(
                       'text-[10px] px-1.5 py-0.5 rounded-full uppercase tracking-wider font-bold',
                       normalizeStatus(status) === 'DELIVERED' || normalizeStatus(status) === 'ARRIVED'
-                        ? 'bg-emerald-50 text-emerald-600'
+                        ? 'bg-blue-50 text-blue-600'
                         : normalizeStatus(status) === 'DELAYED'
                           ? 'bg-rose-50 text-rose-600'
-                          : 'bg-indigo-50 text-indigo-600',
+                          : normalizeStatus(status) === 'IN_TRANSIT'
+                            ? 'bg-emerald-50 text-emerald-600'
+                            : 'bg-gray-100 text-gray-600',
                     )}
                   >
                     {status}
                   </span>
                 </div>
-                <div className="text-xs space-y-1">
-                  <div className="flex justify-between text-gray-600"><span>Container</span><span className="font-medium">{shipment.container_number}</span></div>
-                  <div className="flex justify-between text-gray-600"><span>Carrier</span><span className="font-medium">{shipment.carrier}</span></div>
+                <div className="text-xs space-y-1.5 border-t border-gray-100 pt-2">
+                  <div className="flex justify-between text-gray-600"><span>Shipment ID</span><span className="font-medium">{shipment.bl_number || shipment.canonical_id || '—'}</span></div>
+                  <div className="flex justify-between text-gray-600"><span>Carrier</span><span className="font-medium">{shipment.carrier || '—'}</span></div>
+                  <div className="flex justify-between text-gray-600"><span>Last GPS update</span><span className="font-medium">{formatTimestamp(lastGpsTs)}</span></div>
+                  <div className="flex justify-between text-gray-600"><span>Container</span><span className="font-medium">{shipment.container_number || '—'}</span></div>
                   <div className="flex justify-between text-gray-600"><span>ETA</span><span className="font-medium">{shipment.eta || 'TBD'}</span></div>
+                  <div className="flex justify-between text-gray-600"><span>Origin</span><span className="font-medium">{shipment.origin || '—'}</span></div>
+                  <div className="flex justify-between text-gray-600"><span>Destination</span><span className="font-medium">{shipment.destination || '—'}</span></div>
                 </div>
               </div>
             </Popup>

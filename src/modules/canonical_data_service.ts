@@ -12,10 +12,13 @@ export interface AnalyticsSnapshot {
   active: number;
   delivered: number;
   delayed: number;
+  pending: number;
   by_carrier: Record<string, number>;
   by_status: Record<string, number>;
   by_route: Record<string, number>;
+  by_origin_port: Record<string, number>;
   co2_emission_total: number;
+  cargo_value_total: number;
   last_updated: string;
 }
 
@@ -60,7 +63,10 @@ export class CanonicalDataService {
       merged.containers = payload.containers?.length ? payload.containers : existing.containers;
       merged.events = payload.events?.length ? payload.events : existing.events;
       merged.vessels = payload.vessels?.length ? payload.vessels : existing.vessels;
-      merged.route_geometry = payload.route_geometry || existing.route_geometry;
+      merged.route_geometry = payload.route_geometry
+        ? { ...(existing.route_geometry || {}), ...payload.route_geometry }
+        : existing.route_geometry;
+      merged.vessel_position = (payload as any).vessel_position ?? (existing as any).vessel_position;
 
       this.shipments.set(payload.id, merged);
     }
@@ -137,6 +143,7 @@ export class CanonicalDataService {
           container_status: shipment_status,
           container_size: fused.cargo?.weight,
           container_type: fused.cargo?.type,
+          cargo_value: fused.cargo?.value,
         },
       ],
       events: (fused.tracking?.events || []).map((evt: any) => ({
@@ -152,8 +159,19 @@ export class CanonicalDataService {
         ? {
             route_geometry_type: 'LineString',
             route_coordinates: fused.route?.geometry,
+            current_coordinates: fused.tracking?.vessel_position
+              ? [fused.tracking.vessel_position.lat, fused.tracking.vessel_position.lng]
+              : fused.tracking?.location
+                ? [fused.tracking.location.lat, fused.tracking.location.lng]
+                : undefined,
           }
         : undefined,
+      vessel_position: fused.tracking?.vessel_position ||
+        (fused.tracking?.location ? {
+          lat: fused.tracking.location.lat,
+          lng: fused.tracking.location.lng,
+          timestamp: fused.sources?.timestamp || new Date().toISOString(),
+        } : undefined),
       metadata: {},
     } as CanonicalShipmentRecord;
 
@@ -231,10 +249,13 @@ export class CanonicalDataService {
       active: 0,
       delivered: 0,
       delayed: 0,
+      pending: 0,
       by_carrier: {},
       by_status: {},
       by_route: {},
+      by_origin_port: {},
       co2_emission_total: 0,
+      cargo_value_total: 0,
       last_updated: this.lastUpdated,
     };
 
@@ -242,15 +263,19 @@ export class CanonicalDataService {
       const status = (s.shipment.shipment_status || 'unknown').toLowerCase().replace(/[\s-]+/g, '_');
       const carrier = s.carrier?.carrier_name || s.carrier?.carrier_code || 'Unknown';
       const routeKey = `${s.route?.origin_port_name || 'Unknown'} → ${s.route?.destination_port_name || 'Unknown'}`;
+      const originPort = s.route?.origin_port_name || 'Unknown';
 
       snapshot.by_carrier[carrier] = (snapshot.by_carrier[carrier] || 0) + 1;
       snapshot.by_status[status] = (snapshot.by_status[status] || 0) + 1;
       snapshot.by_route[routeKey] = (snapshot.by_route[routeKey] || 0) + 1;
+      snapshot.by_origin_port[originPort] = (snapshot.by_origin_port[originPort] || 0) + 1;
       snapshot.co2_emission_total += Number(s.route?.co2_emission || 0);
+      snapshot.cargo_value_total += Number((s.containers?.[0] as any)?.cargo_value || 0);
 
       if (status.includes('arrived') || status.includes('delivered')) snapshot.delivered += 1;
+      else if (status.includes('delay') || status.includes('exception') || status.includes('hold')) snapshot.delayed += 1;
+      else if (status.includes('pending')) snapshot.pending += 1;
       else snapshot.active += 1;
-      if (status.includes('delay') || status.includes('exception') || status.includes('hold')) snapshot.delayed += 1;
     });
 
     return snapshot;

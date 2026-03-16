@@ -48,6 +48,8 @@ export default function Dashboard() {
       const route = s.route || {};
       const container = s.containers?.[0] || {};
       const coords = s.route_geometry?.route_coordinates;
+      const currentCoords = s.route_geometry?.current_coordinates;
+      const vesselPos = (s as any).vessel_position;
       return {
         bl_number: s.bl_number || sh.booking_number || sh.shipment_id,
         client: s.client || 'Client',
@@ -64,6 +66,13 @@ export default function Dashboard() {
         route_geometry: s.route_geometry,
         status_raw: sh.shipment_status,
         canonical_id: sh.shipment_id,
+        last_location: vesselPos
+          ? { lat: vesselPos.lat, lng: vesselPos.lng }
+          : Array.isArray(currentCoords) && currentCoords.length >= 2
+            ? { lat: currentCoords[0], lng: currentCoords[1] }
+            : undefined,
+        vessel_position: vesselPos,
+        shipment: sh,
       };
     });
   }, [canonicalShipments]);
